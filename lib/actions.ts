@@ -1,6 +1,6 @@
 "use server";
 
-import { AuthError } from "next-auth";
+import { AuthError, CredentialsSignin } from "next-auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
@@ -10,7 +10,8 @@ import { db } from "./db";
 import { upsertFromOpenLibrary } from "./openlibrary";
 import { isStatus } from "./status";
 import { parseBooksCsv, parseKindleClippings, type ImportedBook } from "./importers";
-import { registerSchema } from "./validation";
+import { firstIssue, goalSchema, registerSchema } from "./validation";
+import { setGoal } from "./stats";
 import { createBook, importBooks, saveShelfReview, setShelfStatus } from "./shelf";
 
 export type FormState = { error?: string; message?: string } | undefined;
@@ -49,6 +50,9 @@ export async function login(_: FormState, formData: FormData): Promise<FormState
       redirectTo: "/",
     });
   } catch (e) {
+    if (e instanceof CredentialsSignin && e.code === "too_many_attempts") {
+      return { error: "Слишком много попыток. Подождите 15 минут." };
+    }
     if (e instanceof AuthError) return { error: "Неверный email или пароль." };
     throw e; // redirect после успешного входа
   }
@@ -175,4 +179,16 @@ export async function importFile(_: FormState, formData: FormData): Promise<Form
   const { found, added } = await importBooks(userId, items);
   revalidatePath("/");
   return { message: `Найдено книг: ${found}, добавлено на полку: ${added}` };
+}
+
+// ---------- Цель на год ----------
+
+export async function saveGoal(year: number, _: FormState, formData: FormData): Promise<FormState> {
+  const userId = await requireUserId();
+  const raw = String(formData.get("target") ?? "").trim();
+  const parsed = goalSchema.safeParse({ year, target: raw === "" ? null : Number(raw) });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  await setGoal(userId, year, parsed.data.target);
+  revalidatePath("/stats");
+  return { message: parsed.data.target === null ? "Цель убрана" : "Цель сохранена" };
 }

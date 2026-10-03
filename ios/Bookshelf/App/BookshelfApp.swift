@@ -49,6 +49,8 @@ struct MainTabView: View {
                 .tabItem { Label("Полка", systemImage: "books.vertical") }
             SearchView()
                 .tabItem { Label("Поиск", systemImage: "magnifyingglass") }
+            StatsView()
+                .tabItem { Label("Итоги", systemImage: "chart.bar") }
             ProfileView()
                 .tabItem { Label("Профиль", systemImage: "person.crop.circle") }
         }

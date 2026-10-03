@@ -121,6 +121,27 @@ final class APIClient {
         let _: OK = try await send("DELETE", "shelf/\(bookId)")
     }
 
+    // MARK: - Итоги
+
+    func stats(year: Int? = nil) async throws -> YearStats {
+        try await send("GET", "stats", query: year.map { [URLQueryItem(name: "year", value: String($0))] } ?? [])
+    }
+
+    /// target = nil убирает цель.
+    func setGoal(year: Int, target: Int?) async throws -> YearStats {
+        struct Body: Encodable {
+            let year: Int
+            let target: Int?
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(year, forKey: .year)
+                try container.encode(target, forKey: .target) // null явно — сервер так убирает цель
+            }
+            enum CodingKeys: String, CodingKey { case year, target }
+        }
+        return try await send("PUT", "goal", json: Body(year: year, target: target))
+    }
+
     // MARK: - Импорт
 
     func importFile(_ data: Data, filename: String, kind: ImportKind) async throws -> ImportResult {

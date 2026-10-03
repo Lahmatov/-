@@ -5,6 +5,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { isRateLimited, loginKey, recordFailure, resetAttempts } from "@/lib/rate-limit";
+
+class TooManyAttempts extends CredentialsSignin {
+  code = "too_many_attempts";
+}
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -25,10 +30,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(raw) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) throw new CredentialsSignin();
+        const key = loginKey(parsed.data.email);
+        if (isRateLimited(key)) throw new TooManyAttempts();
         const user = await db.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
-        if (!user?.passwordHash) throw new CredentialsSignin();
-        const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) throw new CredentialsSignin();
+        const ok = !!user?.passwordHash && (await bcrypt.compare(parsed.data.password, user.passwordHash));
+        if (!user || !ok) {
+          recordFailure(key);
+          throw new CredentialsSignin();
+        }
+        resetAttempts(key);
         return { id: user.id, name: user.name, email: user.email, image: user.image };
       },
     }),

@@ -163,3 +163,14 @@ enum ImportKind: String, Sendable {
     case kindle
     case csv
 }
+
+struct YearStats: Codable, Sendable {
+    let year: Int
+    let goal: Int?
+    let readCount: Int
+    /// Январь — индекс 0.
+    let byMonth: [Int]
+    let avgRating: Double?
+    let readingNow: Int
+    let years: [Int]
+}

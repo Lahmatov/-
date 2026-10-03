@@ -23,6 +23,7 @@ model User {
   accounts   Account[]
   sessions   Session[]
   apiTokens  ApiToken[]
+  goals      ReadingGoal[]
   entries    ShelfEntry[]
   booksAdded Book[]       @relation("BookAddedBy")
 }
@@ -114,4 +115,15 @@ model ShelfEntry {
 
   @@unique([userId, bookId])
   @@index([userId, status])
+}
+
+// Цель на год: сколько книг пользователь хочет прочитать.
+model ReadingGoal {
+  userId String
+  year   Int
+  target Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, year])
 }

@@ -46,8 +46,8 @@ struct BookDetailView: View {
             if let entry = details.myEntry {
                 Section("Оценка и отзыв") {
                     ReviewEditor(bookId: details.book.id, entry: entry) { await load() }
-                        // Пересоздаём редактор, когда кнопки статуса меняют даты.
-                        .id(Self.editorID(entry))
+                        // Кнопки статуса меняют даты — пересоздаём редактор. Даты меняются только вместе со статусом.
+                        .id(entry.status)
                 }
             }
 
@@ -134,12 +134,6 @@ struct BookDetailView: View {
         }
         .disabled(isUpdating)
         .padding(.vertical, 4)
-    }
-
-    private static func editorID(_ entry: ShelfEntry) -> String {
-        let start = entry.startedAt.map(DateCoding.dayString) ?? "-"
-        let finish = entry.finishedAt.map(DateCoding.dayString) ?? "-"
-        return "\(entry.status.rawValue)|\(start)|\(finish)"
     }
 
     private func load() async {

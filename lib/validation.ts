@@ -40,3 +40,9 @@ export const reviewJsonSchema = z.object({
 });
 
 export const firstIssue = (e: z.ZodError) => e.issues[0]?.message ?? "Некорректные данные";
+
+export const goalSchema = z.object({
+  year: z.number().int().min(1900).max(new Date().getUTCFullYear() + 1),
+  // null — убрать цель
+  target: z.number().int().min(1, "Цель — от 1 книги").max(1000, "Слишком большая цель").nullable(),
+});

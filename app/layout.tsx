@@ -26,6 +26,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </form>
             {session?.user ? (
               <nav className="flex items-center gap-3 text-sm">
+                <Link href="/stats" className="text-neutral-400 hover:text-neutral-100">
+                  Итоги
+                </Link>
                 <Link href="/import" className="text-neutral-400 hover:text-neutral-100">
                   Импорт
                 </Link>

@@ -106,8 +106,9 @@ export default async function BookPage({
           </div>
           {mine && (
             <ReviewForm
-              // Пересоздаём форму, когда кнопки статуса меняют даты, — иначе поля покажут старые значения.
-              key={`${mine.status}-${dateInput(mine.startedAt)}-${dateInput(mine.finishedAt)}`}
+              // Кнопки статуса меняют даты — пересоздаём форму, чтобы поля показали новые значения.
+              // Даты меняются только вместе со статусом, а ключ по датам сбрасывал бы «Сохранено».
+              key={mine.status}
               bookId={book.id}
               entry={{
                 rating: mine.rating,
