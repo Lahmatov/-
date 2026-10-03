@@ -308,6 +308,10 @@ final class APIClient {
         return try await send("PUT", "goal", json: Body(year: year, target: target))
     }
 
+    func wrapped(year: Int) async throws -> Wrapped {
+        try await send("GET", "wrapped", query: [URLQueryItem(name: "year", value: String(year))])
+    }
+
     // MARK: - Импорт
 
     func importFile(_ data: Data, filename: String, kind: ImportKind) async throws -> ImportResult {

@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   description: "Отмечайте, что читаете, и делитесь отзывами о книгах",
 };
 
-export const viewport: Viewport = { themeColor: "#0a0a0a" };
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+  ],
+};
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();

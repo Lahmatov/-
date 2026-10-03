@@ -49,6 +49,9 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
           </div>
         )}
         <GoalForm key={stats.year} year={stats.year} goal={stats.goal} />
+        <Link href={`/wrapped/${stats.year}`} className="btn-primary inline-flex">
+          Итоги {stats.year} картинкой
+        </Link>
       </section>
 
       <div className="grid grid-cols-2 gap-4">

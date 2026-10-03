@@ -22,6 +22,7 @@ targets:
     platform: iOS
     sources:
       - path: Bookshelf
+      - path: Shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
@@ -43,6 +44,7 @@ targets:
         NSCameraUsageDescription: Камера нужна, чтобы сканировать штрихкод (ISBN) на обложке книги.
         # Адрес сервера и Google Client ID берутся из Config/*.xcconfig
         API_BASE_URL: $(API_BASE_URL)
+        AppGroupID: $(APP_GROUP_ID)
         GIDClientID: $(GOOGLE_CLIENT_ID)
         CFBundleURLTypes:
           - CFBundleURLSchemes: [$(GOOGLE_REVERSED_CLIENT_ID)]
@@ -55,9 +57,38 @@ targets:
         com.apple.developer.applesignin: [Default]
         # Push-уведомления (APNs). Для Release-сборки в App Store поменяйте на production.
         aps-environment: development
+        # Общий контейнер с виджетом
+        com.apple.security.application-groups: [$(APP_GROUP_ID)]
     dependencies:
       - package: GoogleSignIn
         product: GoogleSignIn
+      - target: BookshelfWidget
+
+  BookshelfWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: BookshelfWidget
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).widget
+        PRODUCT_NAME: BookshelfWidget
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+    info:
+      path: BookshelfWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Полка
+        AppGroupID: $(APP_GROUP_ID)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: BookshelfWidget/BookshelfWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [$(APP_GROUP_ID)]
 
   BookshelfTests:
     type: bundle.unit-test

@@ -390,3 +390,24 @@ struct NotificationList: Codable, Sendable {
     let unread: Int
     let items: [AppNotification]
 }
+
+// MARK: - Итоги года
+
+struct Wrapped: Codable, Sendable {
+    struct Count: Codable, Sendable { let value: String; let count: Int }
+    struct TopGenre: Codable, Sendable { let slug: String; let name: String; let count: Int }
+    struct RatedPick: Codable, Sendable { let book: Book; let rating: Int }
+    struct LongPick: Codable, Sendable { let book: Book; let pages: Int }
+
+    let year: Int
+    let name: String
+    let booksRead: Int
+    let pagesRead: Int
+    let avgRating: Double?
+    let topAuthor: Count?
+    let topGenre: TopGenre?
+    let bestBook: RatedPick?
+    let longestBook: LongPick?
+    let busiestMonth: Int?
+    let byMonth: [Int]
+}

@@ -2,6 +2,8 @@
 // удобно положить в Config/Local.xcconfig — он не попадает в git.
 
 APP_BUNDLE_ID = com.example.bookshelf
+// Общий контейнер приложения и виджета
+APP_GROUP_ID = group.$(APP_BUNDLE_ID)
 DEVELOPMENT_TEAM =
 
 // Google Sign-In: Client ID типа iOS из Google Cloud Console и его «перевёрнутая» форма

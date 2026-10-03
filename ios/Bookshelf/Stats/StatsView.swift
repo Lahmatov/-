@@ -81,6 +81,14 @@ struct StatsView: View {
             }
 
             Section {
+                NavigationLink {
+                    WrappedView(year: stats.year)
+                } label: {
+                    Label("Итоги \(String(stats.year)) картинкой", systemImage: "sparkles")
+                }
+            }
+
+            Section {
                 LabeledContent("Средняя оценка", value: stats.avgRating.map { String(format: "%.1f", $0) } ?? "—")
                 LabeledContent("Читаю сейчас", value: "\(stats.readingNow)")
             }

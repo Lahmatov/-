@@ -103,7 +103,9 @@ struct ShelfView: View {
     private func load() async {
         if allGenres.isEmpty { allGenres = (try? await auth.api.genres()) ?? [] }
         do {
-            shelf = try await auth.api.shelf()
+            let loaded = try await auth.api.shelf()
+            shelf = loaded
+            await WidgetSync.update(shelf: loaded, api: auth.api)
         } catch {
             if !Task.isCancelled { errorMessage = error.localizedDescription }
         }
