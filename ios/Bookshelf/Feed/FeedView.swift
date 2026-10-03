@@ -9,6 +9,7 @@ struct FeedView: View {
     @State private var people: [PublicUser] = []
     @State private var errorMessage: String?
     @State private var path = NavigationPath()
+    @State private var unread = 0
 
     private var trimmedQuery: String { query.trimmingCharacters(in: .whitespaces) }
 
@@ -60,6 +61,14 @@ struct FeedView: View {
                 }
             }
             .navigationTitle("Лента")
+            .toolbar {
+                Button {
+                    path.append(NotificationsRoute())
+                } label: {
+                    Image(systemName: unread > 0 ? "bell.badge" : "bell")
+                }
+                .accessibilityLabel(unread > 0 ? "Уведомления, новых: \(unread)" : "Уведомления")
+            }
             .searchable(text: $query, prompt: "Найти людей по имени")
             .task(id: trimmedQuery) { await searchPeople(trimmedQuery) }
             .task { await load() }
@@ -87,6 +96,7 @@ struct FeedView: View {
     }
 
     private func load() async {
+        unread = (try? await auth.api.notifications().unread) ?? 0
         do {
             let first = try await auth.api.feed()
             feed = first
@@ -162,6 +172,12 @@ private struct FeedRow: View {
             if let review = item.review {
                 Text(review)
                     .lineLimit(6)
+            }
+            if item.type == .review, let entryId = item.entryId {
+                HStack(spacing: 20) {
+                    LikeButton(entryId: entryId, likes: item.likes ?? 0, likedByMe: item.likedByMe ?? false)
+                    CommentsButton(entryId: entryId, count: item.comments ?? 0)
+                }
             }
         }
         .padding(.vertical, 4)

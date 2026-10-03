@@ -118,6 +118,9 @@ struct Review: Codable, Identifiable, Hashable, Sendable {
     let rating: Int?
     let review: String?
     let updatedAt: Date
+    let likes: Int?
+    let likedByMe: Bool?
+    let comments: Int?
 }
 
 struct BookDetails: Codable, Sendable {
@@ -215,6 +218,10 @@ struct FeedItem: Codable, Identifiable, Hashable, Sendable {
     let createdAt: Date
     let user: PublicUser
     let book: Book
+    let entryId: String?
+    let likes: Int?
+    let likedByMe: Bool?
+    let comments: Int?
 
     /// Подпись без глаголов прошедшего времени, чтобы не угадывать род.
     var label: String {
@@ -348,4 +355,38 @@ struct Recommendation: Codable, Identifiable, Hashable, Sendable {
     let book: Book
     let reason: String
     var id: String { book.id }
+}
+
+// MARK: - Лайки, комментарии, уведомления
+
+struct LikeState: Codable, Hashable, Sendable {
+    let likes: Int
+    let likedByMe: Bool
+}
+
+struct Comment: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let text: String
+    let createdAt: Date
+    let user: PublicUser
+}
+
+struct CommentThread: Codable, Sendable {
+    let reviewAuthorId: String
+    let comments: [Comment]
+}
+
+struct AppNotification: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let type: String
+    let read: Bool
+    let createdAt: Date
+    let actor: PublicUser
+    let book: Book?
+    let text: String
+}
+
+struct NotificationList: Codable, Sendable {
+    let unread: Int
+    let items: [AppNotification]
 }

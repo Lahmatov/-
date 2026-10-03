@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
+import { unreadCount } from "@/lib/notifications";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export const viewport: Viewport = { themeColor: "#0a0a0a" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
+  const unread = session?.user ? await unreadCount(session.user.id) : 0;
   return (
     <html lang="ru">
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
@@ -36,6 +38,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     {label}
                   </Link>
                 ))}
+                <Link href="/notifications" className="relative text-neutral-400 hover:text-neutral-100" aria-label="Уведомления">
+                  🔔
+                  {unread > 0 && (
+                    <span className="absolute -right-2 -top-1 rounded-full bg-amber-500 px-1 text-[10px] font-bold text-black">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                </Link>
               </nav>
             ) : (
               <>

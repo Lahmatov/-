@@ -20,6 +20,13 @@ struct UserProfileView: View {
         }
         .navigationTitle(profile?.user.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let profile {
+                ShareLink(item: ShareURL.make("u/\(profile.user.id)"), subject: Text(profile.user.name)) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+        }
         .task { await load() }
         .errorAlert($errorMessage)
     }

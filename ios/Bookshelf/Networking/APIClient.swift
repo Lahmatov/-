@@ -177,6 +177,43 @@ final class APIClient {
         return response.entry
     }
 
+    // MARK: - Лайки, комментарии, уведомления
+
+    private struct CommentResponse: Decodable { let comment: Comment }
+
+    func setLiked(_ liked: Bool, entryId: String) async throws -> LikeState {
+        try await send(liked ? "POST" : "DELETE", "reviews/\(entryId)/like")
+    }
+
+    func comments(entryId: String) async throws -> CommentThread {
+        try await send("GET", "reviews/\(entryId)/comments")
+    }
+
+    func addComment(_ text: String, entryId: String) async throws -> Comment {
+        let response: CommentResponse = try await send("POST", "reviews/\(entryId)/comments", json: ["text": text])
+        return response.comment
+    }
+
+    func deleteComment(id: String) async throws {
+        let _: OK = try await send("DELETE", "comments/\(id)")
+    }
+
+    func notifications() async throws -> NotificationList {
+        try await send("GET", "notifications")
+    }
+
+    func markNotificationsRead() async throws {
+        let _: OK = try await send("POST", "notifications/read")
+    }
+
+    func registerDevice(token: String) async throws {
+        let _: OK = try await send("POST", "devices", json: ["token": token])
+    }
+
+    func unregisterDevice(token: String) async throws {
+        let _: OK = try await send("DELETE", "devices/\(token)")
+    }
+
     // MARK: - Люди и лента
 
     private struct UsersResponse: Decodable { let users: [PublicUser] }

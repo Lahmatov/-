@@ -70,6 +70,9 @@ final class AuthStore {
     }
 
     func logout() async {
+        #if canImport(UIKit)
+        await PushManager.shared.disable(api: api)
+        #endif
         try? await api.logout()
         clearSession()
     }

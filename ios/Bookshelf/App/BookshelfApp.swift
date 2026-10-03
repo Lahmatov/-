@@ -5,6 +5,7 @@ import GoogleSignIn
 
 @main
 struct BookshelfApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var auth = AuthStore(api: APIClient(baseURL: AppConfig.apiBaseURL))
 
     var body: some Scene {
@@ -49,6 +50,7 @@ extension View {
             .navigationDestination(for: ListRoute.self) { ListDetailView(listId: $0.id) }
             .navigationDestination(for: AuthorRoute.self) { AuthorView(name: $0.name) }
             .navigationDestination(for: GenreRoute.self) { GenreView(slug: $0.slug, name: $0.name) }
+            .navigationDestination(for: NotificationsRoute.self) { _ in NotificationsView() }
     }
 }
 
@@ -64,6 +66,7 @@ struct RootView: View {
                 SignInView()
             case .signedIn:
                 MainTabView()
+                    .task { await PushManager.shared.enable(api: auth.api) }
             }
         }
         .task { await auth.restore() }

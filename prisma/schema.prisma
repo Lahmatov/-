@@ -24,6 +24,11 @@ model User {
   sessions   Session[]
   apiTokens  ApiToken[]
   goals      ReadingGoal[]
+  likes      ReviewLike[]
+  comments   ReviewComment[]
+  notifications Notification[] @relation("NotificationRecipient")
+  actedNotifications Notification[] @relation("NotificationActor")
+  devices    DeviceToken[]
   following  Follow[]     @relation("Follower")
   followers  Follow[]     @relation("Following")
   activities Activity[]
@@ -121,8 +126,10 @@ model ShelfEntry {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book     Book            @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  likes    ReviewLike[]
+  comments ReviewComment[]
 
   @@unique([userId, bookId])
   @@index([userId, status])
@@ -217,4 +224,56 @@ model BookGenre {
 
   @@id([bookId, genreSlug])
   @@index([genreSlug])
+}
+
+// ---------- Лайки, комментарии, уведомления ----------
+
+model ReviewLike {
+  userId    String
+  entryId   String
+  createdAt DateTime @default(now())
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry ShelfEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, entryId])
+  @@index([entryId])
+}
+
+model ReviewComment {
+  id        String   @id @default(cuid())
+  entryId   String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry ShelfEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId, createdAt])
+}
+
+// type: FOLLOW | LIKE | COMMENT
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  actorId   String
+  type      String
+  entryId   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// Токены устройств для push-уведомлений (APNs).
+model DeviceToken {
+  token     String   @id
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

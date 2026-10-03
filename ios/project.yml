@@ -53,6 +53,8 @@ targets:
       path: Bookshelf/Bookshelf.entitlements
       properties:
         com.apple.developer.applesignin: [Default]
+        # Push-уведомления (APNs). Для Release-сборки в App Store поменяйте на production.
+        aps-environment: development
     dependencies:
       - package: GoogleSignIn
         product: GoogleSignIn

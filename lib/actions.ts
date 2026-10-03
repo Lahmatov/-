@@ -10,8 +10,9 @@ import { db } from "./db";
 import { upsertFromOpenLibrary } from "./openlibrary";
 import { isStatus } from "./status";
 import { parseBooksCsv, parseKindleClippings, type ImportedBook } from "./importers";
-import { firstIssue, goalSchema, listSchema, nameSchema, openLibraryHitSchema, progressSchema, registerSchema } from "./validation";
+import { commentSchema, firstIssue, goalSchema, listSchema, nameSchema, openLibraryHitSchema, progressSchema, registerSchema } from "./validation";
 import { addGenres, isGenre } from "./genres";
+import { addComment, deleteComment, likeReview, unlikeReview } from "./reviews";
 import { follow, unfollow, updateName } from "./social";
 import { addToList, createList, deleteList, removeFromList, updateList } from "./lists";
 import { setGoal } from "./stats";
@@ -311,4 +312,28 @@ export async function removeGenreAction(bookId: string, slug: string) {
   // Убрать можно только жанр, который поставил сам.
   await db.bookGenre.deleteMany({ where: { bookId, genreSlug: slug, addedById: me } });
   revalidatePath(`/books/${bookId}`);
+}
+
+// ---------- Лайки и комментарии ----------
+
+export async function toggleLike(entryId: string, like: boolean, path: string) {
+  const me = await requireUserId();
+  if (like) await likeReview(me, entryId);
+  else await unlikeReview(me, entryId);
+  revalidatePath(path);
+}
+
+export async function addCommentAction(entryId: string, path: string, _: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireUserId();
+  const parsed = commentSchema.safeParse({ text: formData.get("text") });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  if (!(await addComment(me, entryId, parsed.data.text))) return { error: "Отзыв не найден" };
+  revalidatePath(path);
+  return { message: "Отправлено" };
+}
+
+export async function deleteCommentAction(commentId: string, path: string) {
+  const me = await requireUserId();
+  await deleteComment(me, commentId);
+  revalidatePath(path);
 }

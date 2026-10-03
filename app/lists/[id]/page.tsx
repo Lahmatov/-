@@ -6,6 +6,19 @@ import { getList } from "@/lib/lists";
 import { BookRow } from "@/components/BookRow";
 import { ListForm } from "@/components/ListForm";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ShareButton } from "@/components/ShareButton";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const result = await getList((await params).id, null);
+  if (!result) return {};
+  const { list } = result;
+  return {
+    title: list.title,
+    description: list.description ?? `Список книг: ${list.items.length}`,
+    openGraph: { title: list.title, images: list.items.flatMap((i) => (i.book.coverUrl ? [i.book.coverUrl] : [])).slice(0, 1) },
+  };
+}
 
 export default async function ListPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,7 +30,10 @@ export default async function ListPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold">{list.title}</h1>
+        <div className="flex items-start gap-3">
+          <h1 className="flex-1 text-2xl font-bold">{list.title}</h1>
+          {list.isPublic && <ShareButton title={list.title} path={`/lists/${list.id}`} />}
+        </div>
         <p className="text-sm text-neutral-400">
           Список{" "}
           <Link href={`/u/${list.user.id}`} className="hover:underline">

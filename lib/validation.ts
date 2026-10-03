@@ -85,3 +85,7 @@ export const progressSchema = z.object({
   currentPage: z.number().int().min(0, "Страница не может быть отрицательной").max(20000).nullable(),
   totalPages: z.number().int().min(1).max(20000).nullish(),
 });
+
+export const commentSchema = z.object({
+  text: z.string().trim().min(1, "Пустой комментарий").max(2000, "Слишком длинный комментарий"),
+});

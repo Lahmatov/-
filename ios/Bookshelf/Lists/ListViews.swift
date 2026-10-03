@@ -124,6 +124,11 @@ struct ListDetailView: View {
         }
         .refreshable { await load() }
         .toolbar {
+            if details.list.isPublic {
+                ShareLink(item: ShareURL.make("lists/\(details.list.id)"), subject: Text(details.list.title)) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
             if details.isOwner {
                 Menu {
                     Button("Изменить", systemImage: "pencil") { showEdit = true }

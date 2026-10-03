@@ -6,6 +6,10 @@ import { GENRES } from "@/lib/genres";
 import { AuthorLinks } from "@/components/AuthorLinks";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ProgressForm } from "@/components/ProgressForm";
+import { ReviewSocial } from "@/components/ReviewSocial";
+import { ShareButton } from "@/components/ShareButton";
+import { socialFor } from "@/lib/reviews";
+import type { Metadata } from "next";
 import { STATUS_LABEL, isStatus, type Status } from "@/lib/status";
 import Link from "next/link";
 import { addGenreAction, removeFromShelf, removeGenreAction, setStatus, toggleListItem } from "@/lib/actions";
@@ -44,6 +48,18 @@ const ACTIONS: Record<Status | "NONE", { status: Status; label: string }[]> = {
   DROPPED: [{ status: "READING", label: "Начать заново" }],
 };
 
+/** Превью ссылки в мессенджерах и соцсетях. */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const book = await db.book.findUnique({ where: { id: (await params).id } });
+  if (!book) return {};
+  const title = `${book.title} — ${book.author}`;
+  return {
+    title,
+    description: `Оценки и отзывы читателей о книге «${book.title}»${book.year ? ` (${book.year})` : ""}.`,
+    openGraph: { title, type: "book", images: book.coverUrl ? [book.coverUrl] : [] },
+  };
+}
+
 export default async function BookPage({
   params,
   searchParams,
@@ -67,6 +83,15 @@ export default async function BookPage({
       : [],
   );
   const myLists = userId ? await getMyLists(userId, book.id) : null;
+  const reviewIds = reviews.map((r) => r.id);
+  const [social, comments] = await Promise.all([
+    socialFor(reviewIds, userId ?? null),
+    db.reviewComment.findMany({
+      where: { entryId: { in: reviewIds } },
+      include: { user: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
   const inLists = myLists?.filter((l) => l.containsBook).length ?? 0;
   const myStatus = mine && isStatus(mine.status) ? mine.status : null;
 
@@ -79,7 +104,10 @@ export default async function BookPage({
       <div className="flex flex-col gap-6 sm:flex-row">
         <BookCover title={book.title} coverUrl={book.coverUrl} size="lg" />
         <div className="space-y-3">
-          <h1 className="text-3xl font-black">{book.title}</h1>
+          <div className="flex items-start gap-3">
+            <h1 className="flex-1 text-3xl font-black">{book.title}</h1>
+            <ShareButton title={book.title} path={`/books/${book.id}`} />
+          </div>
           <p className="text-lg text-neutral-300">
             <AuthorLinks author={book.author} />
             {book.year ? ` · ${book.year}` : ""}
@@ -213,7 +241,7 @@ export default async function BookPage({
         ) : (
           <div className="space-y-4">
             {reviews.map((r) => (
-              <article key={r.id} className="rounded-lg border border-neutral-800 p-4">
+              <article key={r.id} id={`review-${r.id}`} className="rounded-lg border border-neutral-800 p-4">
                 <div className="mb-2 flex items-center gap-3 text-sm">
                   <Link href={`/u/${r.userId}`} className="font-semibold hover:underline">
                     {r.user.name ?? "Читатель"}
@@ -222,6 +250,15 @@ export default async function BookPage({
                   <span className="text-neutral-500">{fmt.format(r.updatedAt)}</span>
                 </div>
                 <p className="whitespace-pre-line text-neutral-300">{r.review}</p>
+                <ReviewSocial
+                  entryId={r.id}
+                  reviewAuthorId={r.userId}
+                  path={`/books/${book.id}`}
+                  viewerId={userId ?? null}
+                  likes={social.get(r.id)?.likes ?? 0}
+                  likedByMe={social.get(r.id)?.likedByMe ?? false}
+                  comments={comments.filter((c) => c.entryId === r.id)}
+                />
               </article>
             ))}
           </div>

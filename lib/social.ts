@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { normalize } from "./books";
+import { notify } from "./notifications";
 
 // Подписки, публичные профили и лента активности.
 
@@ -31,11 +32,11 @@ export async function follow(followerId: string, followingId: string) {
   if (followerId === followingId) return false;
   const target = await db.user.count({ where: { id: followingId } });
   if (!target) return false;
-  await db.follow.upsert({
-    where: { followerId_followingId: { followerId, followingId } },
-    create: { followerId, followingId },
-    update: {},
-  });
+  const existing = await db.follow.findUnique({ where: { followerId_followingId: { followerId, followingId } } });
+  if (!existing) {
+    await db.follow.create({ data: { followerId, followingId } });
+    await notify(followingId, followerId, "FOLLOW");
+  }
   return true;
 }
 
@@ -134,7 +135,7 @@ export async function getFeed(viewerId: string, cursor?: string | null, take = 3
   const entries = page.length
     ? await db.shelfEntry.findMany({
         where: { OR: page.map((a) => ({ userId: a.userId, bookId: a.bookId })), isPublic: true },
-        select: { userId: true, bookId: true, review: true },
+        select: { id: true, userId: true, bookId: true, review: true },
       })
     : [];
   const entryOf = (a: { userId: string; bookId: string }) =>
@@ -148,6 +149,7 @@ export async function getFeed(viewerId: string, cursor?: string | null, take = 3
       status: a.status,
       rating: a.rating,
       review: a.type === "REVIEW" ? reviewOf(a) : null,
+      entryId: entryOf(a)?.id ?? null,
       createdAt: a.createdAt,
       user: a.user,
       book: a.book,

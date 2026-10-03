@@ -130,4 +130,26 @@ final class ModelsTests: XCTestCase {
         XCTAssertEqual(book.authors, ["Илья Ильф", "Евгений Петров"])
         XCTAssertNil(book.pageCount, "старый ответ без pageCount тоже читается")
     }
+
+    func testDecodesSocialAndNotifications() throws {
+        let review = try decode(Review.self, """
+        {"id":"r1","userId":"u1","userName":"Аня","rating":9,"review":"Да","updatedAt":"2026-10-03T12:00:00.000Z",
+         "likes":3,"likedByMe":true,"comments":2}
+        """)
+        XCTAssertEqual(review.likes, 3)
+        XCTAssertEqual(review.likedByMe, true)
+
+        let list = try decode(NotificationList.self, """
+        {"unread":1,"items":[{"id":"n1","type":"LIKE","read":false,"createdAt":"2026-10-03T12:00:00.000Z",
+          "actor":{"id":"u2","name":"Борис"},"book":null,"text":"Борис: ♥ вашему отзыву"}]}
+        """)
+        XCTAssertEqual(list.unread, 1)
+        XCTAssertNil(list.items.first?.book)
+
+        let thread = try decode(CommentThread.self, """
+        {"reviewAuthorId":"u1","comments":[{"id":"c1","text":"Согласен","createdAt":"2026-10-03T12:00:00.000Z",
+          "user":{"id":"u2","name":"Борис"}}]}
+        """)
+        XCTAssertEqual(thread.comments.first?.user.name, "Борис")
+    }
 }

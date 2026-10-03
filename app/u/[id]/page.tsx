@@ -7,6 +7,15 @@ import { Plural } from "@/lib/plural";
 import { BookRow } from "@/components/BookRow";
 import { FollowButton } from "@/components/FollowButton";
 import { NameForm } from "@/components/NameForm";
+import { ShareButton } from "@/components/ShareButton";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const profile = await getProfile((await params).id, null);
+  if (!profile) return {};
+  const name = profile.user.name ?? "Читатель";
+  return { title: `${name} — книжная полка`, description: `Прочитано книг: ${profile.counts.read}` };
+}
 
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -30,6 +39,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
           </p>
         </div>
         {session?.user && !profile.isMe && <FollowButton userId={user.id} isFollowing={profile.isFollowing} />}
+        <ShareButton title={user.name ?? "Читатель"} path={`/u/${user.id}`} />
       </header>
 
       {profile.isMe && (

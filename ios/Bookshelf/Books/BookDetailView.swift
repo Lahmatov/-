@@ -10,6 +10,7 @@ struct BookDetailView: View {
     @State private var isUpdating = false
     @State private var confirmRemove = false
     @State private var showLists = false
+    @State private var openUser: UserRoute?
 
     var body: some View {
         Group {
@@ -66,15 +67,16 @@ struct BookDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(details.reviews) { review in
-                        NavigationLink(value: UserRoute(id: review.userId)) {
-                            ReviewRow(review: review)
-                        }
+                        ReviewRow(review: review) { openUser = UserRoute(id: review.userId) }
                     }
                 }
             }
         }
         .refreshable { await load() }
         .toolbar {
+            ShareLink(item: ShareURL.make("books/\(details.book.id)"), subject: Text(details.book.title)) {
+                Image(systemName: "square.and.arrow.up")
+            }
             Menu {
                 Button("В списки…", systemImage: "list.bullet.rectangle") { showLists = true }
                 if details.myEntry != nil {
@@ -84,6 +86,8 @@ struct BookDetailView: View {
                 Image(systemName: "ellipsis.circle")
             }
         }
+        // В строке отзыва несколько кнопок, поэтому переход к автору — через состояние, а не NavigationLink.
+        .navigationDestination(item: $openUser) { UserProfileView(userId: $0.id) }
         .sheet(isPresented: $showLists) {
             AddToListSheet(bookId: details.book.id)
         }
@@ -230,11 +234,16 @@ struct BookDetailView: View {
 
 private struct ReviewRow: View {
     let review: Review
+    let openAuthor: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(review.userName).font(.subheadline.bold())
+                Button(action: openAuthor) {
+                    Text(review.userName).font(.subheadline.bold())
+                }
+                .buttonStyle(.borderless)
+                .tint(.primary)
                 if let rating = review.rating {
                     Label("\(rating)/10", systemImage: "star.fill")
                         .font(.caption)
@@ -247,6 +256,10 @@ private struct ReviewRow: View {
             }
             if let text = review.review {
                 Text(text)
+            }
+            HStack(spacing: 20) {
+                LikeButton(entryId: review.id, likes: review.likes ?? 0, likedByMe: review.likedByMe ?? false)
+                CommentsButton(entryId: review.id, count: review.comments ?? 0)
             }
         }
         .padding(.vertical, 4)
