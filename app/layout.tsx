@@ -1,0 +1,47 @@
+import type { Metadata, Viewport } from "next";
+import Link from "next/link";
+import { auth } from "@/auth";
+import { logout } from "@/lib/actions";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Книжная полка",
+  description: "Отмечайте, что читаете, и делитесь отзывами о книгах",
+};
+
+export const viewport: Viewport = { themeColor: "#0a0a0a" };
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  return (
+    <html lang="ru">
+      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
+        <header className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950/90 backdrop-blur">
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 px-4 py-3">
+            <Link href="/" className="rounded bg-amber-500 px-2 py-1 text-sm font-black text-black">
+              BOOKS
+            </Link>
+            <form action="/search" className="min-w-0 flex-1">
+              <input name="q" placeholder="Название или автор…" className="input py-1.5" />
+            </form>
+            {session?.user ? (
+              <nav className="flex items-center gap-3 text-sm">
+                <Link href="/import" className="text-neutral-400 hover:text-neutral-100">
+                  Импорт
+                </Link>
+                <form action={logout}>
+                  <button className="text-neutral-400 hover:text-neutral-100">Выйти</button>
+                </form>
+              </nav>
+            ) : (
+              <Link href="/login" className="btn-primary py-1.5">
+                Войти
+              </Link>
+            )}
+          </div>
+        </header>
+        <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
+      </body>
+    </html>
+  );
+}

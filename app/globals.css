@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-amber-500 text-black hover:bg-amber-400;
+}
+@utility btn-ghost {
+  @apply btn border border-neutral-700 text-neutral-200 hover:bg-neutral-800;
+}
+@utility input {
+  @apply w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder:text-neutral-500 focus:border-amber-500 focus:outline-none;
+}
+@utility label {
+  @apply mb-1 block text-sm text-neutral-400;
+}
