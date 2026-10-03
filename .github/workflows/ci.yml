@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web — типы, тесты, сборка
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./ci.db
+      AUTH_SECRET: ci-secret-not-for-production
+      AUTH_TRUST_HOST: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma db push
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  ios:
+    name: iOS — сборка и тесты
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - name: Генерация проекта
+        working-directory: ios
+        run: xcodegen
+      - name: Сборка и тесты в симуляторе
+        working-directory: ios
+        run: |
+          SIM=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+( Pro)?' | head -1)
+          echo "Симулятор: $SIM"
+          xcodebuild test \
+            -project Bookshelf.xcodeproj \
+            -scheme Bookshelf \
+            -destination "platform=iOS Simulator,name=$SIM" \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO

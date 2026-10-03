@@ -41,10 +41,37 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
 2. Authorized redirect URI: `http://localhost:3000/api/auth/callback/google` (и такой же с вашим доменом).
 3. Впишите `AUTH_GOOGLE_ID` и `AUTH_GOOGLE_SECRET` в `.env`. Без них кнопка Google просто не показывается.
 
-### Продакшен
+## Деплой
 
-SQLite годится для разработки. Для сервера поменяйте в `prisma/schema.prisma` `provider = "postgresql"` и задайте
-`DATABASE_URL` (Neon, Supabase, Railway и т. п.). Удобнее всего деплоить на Vercel.
+Сервер собран в Docker-образ: SQLite хранится на томе `/data`, при старте схема базы обновляется сама,
+а в пустой каталог добавляются стартовые книги. Одного сервера с SQLite хватит на тысячи пользователей.
+
+### Свой VPS (Hetzner, Timeweb, DigitalOcean — от ~5 €/мес)
+
+1. Купите VPS с Ubuntu, направьте A-запись домена (например, `books.example.com`) на его IP.
+2. На сервере:
+   ```bash
+   curl -fsSL https://get.docker.com | sh
+   git clone <этот репозиторий> bookshelf && cd bookshelf
+   cp .env.example .env    # впишите AUTH_SECRET, DOMAIN=books.example.com, ключи Google/Apple
+   docker compose up -d
+   ```
+3. Через минуту сайт откроется на `https://books.example.com` — сертификат HTTPS Caddy получает сам.
+4. В iOS-приложении укажите этот адрес в `ios/Config/Release.xcconfig` (`API_BASE_URL`).
+
+Обновление: `git pull && docker compose up -d --build`. Резервная копия базы:
+`docker compose cp app:/data/bookshelf.db ./backup.db`.
+
+### Railway / Render / Fly.io
+
+Подойдёт любой хостинг Docker-образов с постоянным диском: подключите репозиторий, смонтируйте диск в `/data`,
+задайте переменные из `.env.example`.
+
+### Vercel
+
+У Vercel нет постоянного диска, поэтому SQLite там не работает. Нужно поменять в `prisma/schema.prisma`
+`provider = "postgresql"` и взять базу в Neon или Supabase. Ещё ограничитель попыток входа хранит счётчики в памяти
+и на нескольких экземплярах сервера будет мягче.
 
 ## iOS-приложение
 
@@ -73,6 +100,10 @@ SQLite годится для разработки. Для сервера пом�
 | GET | `/stats?year=` | итоги года: `{year, goal, readCount, byMonth[12], avgRating, readingNow, years}` |
 | PUT | `/goal` | `{year, target}` — цель на год, `target: null` убирает её |
 | POST | `/import` | multipart: `file` + `kind` (`kindle` \| `csv`) |
+
+## Проверки
+
+GitHub Actions на каждый PR: веб (типы, тесты, сборка) и iOS (сборка в Xcode и тесты в симуляторе на macOS).
 
 ## Стек
 
