@@ -44,6 +44,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    /** Сессия, выданная до смены пароля, больше не действует. */
+    async jwt({ token }) {
+      if (!token.sub) return token;
+      const user = await db.user.findUnique({ where: { id: token.sub }, select: { passwordChangedAt: true } });
+      if (!user) return null;
+      if (user.passwordChangedAt && token.iat && token.iat * 1000 < user.passwordChangedAt.getTime()) return null;
+      return token;
+    },
     session({ session, token }) {
       if (token.sub) session.user.id = token.sub;
       return session;

@@ -93,6 +93,9 @@ struct CommentsView: View {
                             Text(comment.text)
                         }
                         .deleteDisabled(!canDelete(comment, thread: thread))
+                        .contextMenu {
+                            if comment.user.id != auth.user?.id { ReportMenu(commentId: comment.id) }
+                        }
                     }
                     .onDelete { offsets in
                         Task { await delete(offsets.map { thread.comments[$0] }) }
@@ -231,5 +234,25 @@ enum ShareURL {
     /// Публичная ссылка на страницу сайта (тот же сервер, что и API).
     static func make(_ path: String) -> URL {
         AppConfig.apiBaseURL.appendingPathComponent(path)
+    }
+}
+
+/// «Пожаловаться» с выбором причины — для контекстного меню отзыва или комментария.
+struct ReportMenu: View {
+    var entryId: String?
+    var commentId: String?
+
+    @Environment(AuthStore.self) private var auth
+
+    var body: some View {
+        Menu {
+            ForEach(ReportReason.allCases) { reason in
+                Button(reason.title) {
+                    Task { try? await auth.api.report(reason, entryId: entryId, commentId: commentId) }
+                }
+            }
+        } label: {
+            Label("Пожаловаться", systemImage: "flag")
+        }
     }
 }

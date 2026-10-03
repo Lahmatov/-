@@ -68,6 +68,7 @@ struct BookDetailView: View {
                 } else {
                     ForEach(details.reviews) { review in
                         ReviewRow(review: review) { openUser = UserRoute(id: review.userId) }
+                            .contextMenu { ReportMenu(entryId: review.id) }
                     }
                 }
             }

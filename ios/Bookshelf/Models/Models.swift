@@ -66,6 +66,26 @@ struct User: Codable, Hashable, Sendable {
     let id: String
     let name: String?
     let email: String?
+    /// nil — старый сервер без этого поля.
+    let emailVerified: Bool?
+}
+
+enum ReportReason: String, CaseIterable, Identifiable, Sendable {
+    case spam = "SPAM"
+    case abuse = "ABUSE"
+    case spoiler = "SPOILER"
+    case other = "OTHER"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .spam: L("Спам или реклама")
+        case .abuse: L("Оскорбления")
+        case .spoiler: L("Спойлер без предупреждения")
+        case .other: L("Другое")
+        }
+    }
 }
 
 struct Book: Codable, Identifiable, Hashable, Sendable {

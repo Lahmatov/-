@@ -16,6 +16,9 @@ struct SignInView: View {
     @State private var password = ""
     @State private var isBusy = false
     @State private var errorMessage: String?
+    @State private var isResetting = false
+    @State private var resetEmail = ""
+    @State private var infoMessage: String?
 
     var body: some View {
         ScrollView {
@@ -75,12 +78,39 @@ struct SignInView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isBusy || !canSubmit)
+
+                if mode == .login {
+                    Button("Забыли пароль?") {
+                        resetEmail = email
+                        isResetting = true
+                    }
+                    .font(.footnote)
+                }
             }
             .padding()
             .disabled(isBusy)
         }
         .overlay { if isBusy { ProgressView() } }
         .errorAlert($errorMessage)
+        .errorAlert($infoMessage, title: "Проверьте почту")
+        .alert("Восстановление пароля", isPresented: $isResetting) {
+            TextField("Email", text: $resetEmail)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+            Button("Отправить ссылку") { Task { await requestReset() } }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Пришлём на почту ссылку, по которой можно задать новый пароль.")
+        }
+    }
+
+    private func requestReset() async {
+        let address = resetEmail.trimmingCharacters(in: .whitespaces)
+        guard address.contains("@") else { return }
+        await run {
+            try await auth.api.forgotPassword(email: address)
+            infoMessage = L("Если такой email зарегистрирован, мы отправили на него ссылку для сброса пароля.")
+        }
     }
 
     private var header: some View {

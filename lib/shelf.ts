@@ -117,7 +117,7 @@ export async function getBookDetails(bookId: string, userId: string | null, lang
     }),
     db.shelfEntry.count({ where: { bookId, status: "READ" } }),
     db.shelfEntry.findMany({
-      where: { bookId, isPublic: true, review: { not: null }, ...(userId ? { userId: { not: userId } } : {}) },
+      where: { bookId, isPublic: true, reviewHidden: false, review: { not: null }, ...(userId ? { userId: { not: userId } } : {}) },
       include: { user: { select: { name: true } } },
       orderBy: { updatedAt: "desc" },
       take: 50,

@@ -5,7 +5,7 @@ import { notify } from "./notifications";
 
 async function interactiveEntry(entryId: string) {
   const entry = await db.shelfEntry.findUnique({ where: { id: entryId } });
-  if (!entry || !entry.isPublic || (entry.review === null && entry.rating === null)) return null;
+  if (!entry || !entry.isPublic || entry.reviewHidden || (entry.review === null && entry.rating === null)) return null;
   return entry;
 }
 

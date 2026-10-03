@@ -18,6 +18,8 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
+  // Сессии сайта (JWT), выданные раньше этого момента, недействительны — после сброса пароля.
+  passwordChangedAt DateTime?
   createdAt     DateTime  @default(now())
 
   accounts   Account[]
@@ -29,6 +31,7 @@ model User {
   notifications Notification[] @relation("NotificationRecipient")
   actedNotifications Notification[] @relation("NotificationActor")
   devices    DeviceToken[]
+  reports    Report[]
   following  Follow[]     @relation("Follower")
   followers  Follow[]     @relation("Following")
   activities Activity[]
@@ -123,6 +126,8 @@ model ShelfEntry {
   totalPages  Int? // страниц в издании читателя, если отличается от книги
   review     String?
   isPublic   Boolean   @default(true)
+  // Отзыв скрыт модератором после жалобы: оценка остаётся, текст не показывается другим.
+  reviewHidden Boolean @default(false)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -277,4 +282,22 @@ model DeviceToken {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Жалобы ----------
+
+// Жалоба на отзыв (entryId) или комментарий (commentId). reason: SPAM | ABUSE | SPOILER | OTHER.
+model Report {
+  id         String    @id @default(cuid())
+  reporterId String
+  entryId    String?
+  commentId  String?
+  reason     String
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  resolution String? // HIDDEN | DELETED | DISMISSED
+
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([resolvedAt, createdAt])
 }

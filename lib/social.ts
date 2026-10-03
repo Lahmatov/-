@@ -135,12 +135,15 @@ export async function getFeed(viewerId: string, cursor?: string | null, take = 3
   const entries = page.length
     ? await db.shelfEntry.findMany({
         where: { OR: page.map((a) => ({ userId: a.userId, bookId: a.bookId })), isPublic: true },
-        select: { id: true, userId: true, bookId: true, review: true },
+        select: { id: true, userId: true, bookId: true, review: true, reviewHidden: true },
       })
     : [];
   const entryOf = (a: { userId: string; bookId: string }) =>
     entries.find((e) => e.userId === a.userId && e.bookId === a.bookId);
-  const reviewOf = (a: { userId: string; bookId: string }) => entryOf(a)?.review ?? null;
+  const reviewOf = (a: { userId: string; bookId: string }) => {
+    const e = entryOf(a);
+    return e && !e.reviewHidden ? e.review : null;
+  };
 
   return {
     items: page.filter((a) => entryOf(a)).map((a) => ({

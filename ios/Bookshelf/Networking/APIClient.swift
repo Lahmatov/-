@@ -312,6 +312,34 @@ final class APIClient {
         try await send("GET", "wrapped", query: [URLQueryItem(name: "year", value: String(year))])
     }
 
+    // MARK: - Аккаунт, жалобы, экспорт
+
+    func forgotPassword(email: String) async throws {
+        let _: OK = try await send("POST", "auth/forgot-password", json: ["email": email])
+    }
+
+    func resendVerification() async throws {
+        let _: OK = try await send("POST", "auth/resend-verification")
+    }
+
+    func report(_ reason: ReportReason, entryId: String? = nil, commentId: String? = nil) async throws {
+        struct Body: Encodable { let entryId: String?; let commentId: String?; let reason: String }
+        let _: OK = try await send("POST", "reports", json: Body(entryId: entryId, commentId: commentId, reason: reason.rawValue))
+    }
+
+    /// Своя полка в CSV (формат совместим с импортом).
+    func exportCSV() async throws -> Data {
+        let request = makeRequest("GET", "export")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        if http.statusCode == 401 {
+            onUnauthorized?()
+            throw APIError.unauthorized
+        }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.server(L("Ошибка сервера (%@)", String(http.statusCode))) }
+        return data
+    }
+
     // MARK: - Импорт
 
     func importFile(_ data: Data, filename: String, kind: ImportKind) async throws -> ImportResult {

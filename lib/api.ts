@@ -59,7 +59,12 @@ export async function revokeToken(req: Request) {
 
 // ---------- Сериализация ----------
 
-export const userJSON = (u: Pick<User, "id" | "name" | "email">) => ({ id: u.id, name: u.name, email: u.email });
+export const userJSON = (u: Pick<User, "id" | "name" | "email"> & { emailVerified?: Date | null }) => ({
+  id: u.id,
+  name: u.name,
+  email: u.email,
+  emailVerified: !!u.emailVerified,
+});
 
 export const bookJSON = (b: Book) => ({
   id: b.id,

@@ -33,6 +33,11 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
         <FormMessage state={state} />
         <SubmitButton className="btn-primary w-full">Войти</SubmitButton>
       </form>
+      <p className="mt-3 text-sm">
+        <Link href="/forgot-password" className="text-neutral-400 hover:text-amber-400 hover:underline">
+          Забыли пароль?
+        </Link>
+      </p>
       <p className="mt-4 text-sm text-neutral-400">
         Нет аккаунта?{" "}
         <Link href="/register" className="text-amber-400 hover:underline">

@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { unreadCount } from "@/lib/notifications";
+import { db } from "@/lib/db";
+import { resendVerification } from "@/lib/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,6 +22,11 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   const unread = session?.user ? await unreadCount(session.user.id) : 0;
+  // Плашка «подтвердите email» — только для входа по паролю (Google и Apple адрес уже подтвердили).
+  const me = session?.user
+    ? await db.user.findUnique({ where: { id: session.user.id }, select: { emailVerified: true, passwordHash: true } })
+    : null;
+  const needsVerification = !!me?.passwordHash && !me.emailVerified;
   return (
     <html lang="ru">
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
@@ -64,6 +72,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             )}
           </div>
         </header>
+        {needsVerification && (
+          <div className="border-b border-neutral-800 bg-neutral-900">
+            <form action={resendVerification} className="mx-auto flex max-w-4xl flex-wrap items-center gap-2 px-4 py-2 text-sm">
+              <span className="text-neutral-300">
+                Подтвердите email — письмо со ссылкой отправлено на {session?.user?.email}.
+              </span>
+              <SubmitButton className="btn px-2 py-0.5 text-amber-400 hover:underline">Отправить ещё раз</SubmitButton>
+            </form>
+          </div>
+        )}
         <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
       </body>
     </html>

@@ -17,6 +17,10 @@ import { follow, unfollow, updateName } from "./social";
 import { addToList, createList, deleteList, removeFromList, updateList } from "./lists";
 import { setGoal } from "./stats";
 import { bookExists, createBook, importBooks, saveShelfReview, setProgress, setShelfStatus } from "./shelf";
+import { requestPasswordReset, resetPassword, sendVerificationEmail } from "./account";
+import { isRateLimited, recordFailure } from "./rate-limit";
+import { headers } from "next/headers";
+import { isAdmin, isReportReason, report, resolveReport } from "./moderation";
 
 export type FormState = { error?: string; message?: string } | undefined;
 
@@ -43,6 +47,7 @@ export async function register(_: FormState, formData: FormData): Promise<FormSt
   }
 
   await db.user.create({ data: { name, email, passwordHash: await bcrypt.hash(password, 10) } });
+  await sendVerificationEmail(email).catch((e) => console.error("verification email failed", e));
   await signIn("credentials", { email, password, redirectTo: "/" });
 }
 
@@ -336,4 +341,52 @@ export async function deleteCommentAction(commentId: string, path: string) {
   const me = await requireUserId();
   await deleteComment(me, commentId);
   revalidatePath(path);
+}
+
+// ---------- Email и пароль ----------
+
+export async function resendVerification() {
+  const session = await auth();
+  const email = session?.user?.email;
+  if (!email) return;
+  const key = `verify:${email}`;
+  if (isRateLimited(key, 5)) return;
+  recordFailure(key);
+  await sendVerificationEmail(email);
+}
+
+export async function forgotPassword(_: FormState, formData: FormData): Promise<FormState> {
+  const parsed = z.object({ email: z.string().trim().toLowerCase().email("Некорректный email") }).safeParse({
+    email: formData.get("email"),
+  });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const key = `reset:${(await headers()).get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown"}`;
+  if (isRateLimited(key, 5)) return { error: "Слишком много запросов. Подождите 15 минут." };
+  recordFailure(key);
+  await requestPasswordReset(parsed.data.email);
+  return { message: "Если такой email зарегистрирован, мы отправили на него ссылку для сброса пароля." };
+}
+
+export async function resetPasswordAction(token: string, _: FormState, formData: FormData): Promise<FormState> {
+  const parsed = registerSchema.shape.password.safeParse(formData.get("password"));
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  if (!(await resetPassword(token, parsed.data))) {
+    return { error: "Ссылка устарела или уже использована. Запросите новую." };
+  }
+  redirect("/login?reset=1");
+}
+
+// ---------- Жалобы и модерация ----------
+
+export async function reportAction(target: { entryId?: string; commentId?: string }, reason: string) {
+  const me = await requireUserId();
+  if (!isReportReason(reason)) return;
+  await report(me, target, reason);
+}
+
+export async function resolveReportAction(reportId: string, action: "HIDE" | "DELETE" | "DISMISS") {
+  const me = await requireUserId();
+  if (!(await isAdmin(me))) return;
+  await resolveReport(reportId, action);
+  revalidatePath("/admin/reports");
 }

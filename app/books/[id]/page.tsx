@@ -8,6 +8,7 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { ProgressForm } from "@/components/ProgressForm";
 import { ReviewSocial } from "@/components/ReviewSocial";
 import { ShareButton } from "@/components/ShareButton";
+import { ReportButton } from "@/components/ReportButton";
 import { socialFor } from "@/lib/reviews";
 import type { Metadata } from "next";
 import { STATUS_LABEL, isStatus, type Status } from "@/lib/status";
@@ -189,6 +190,11 @@ export default async function BookPage({
               )}
             </div>
           )}
+          {mine?.reviewHidden && (
+            <p className="rounded-lg bg-red-950 p-3 text-sm text-red-300">
+              Модератор скрыл текст вашего отзыва после жалобы — другие его не видят. Оценка учитывается.
+            </p>
+          )}
           {mine && (
             <ReviewForm
               // Кнопки статуса меняют даты — пересоздаём форму, чтобы поля показали новые значения.
@@ -248,6 +254,7 @@ export default async function BookPage({
                   </Link>
                   {r.rating && <span className="text-amber-400">★ {r.rating}/10</span>}
                   <span className="text-neutral-500">{fmt.format(r.updatedAt)}</span>
+                  {userId && <span className="ml-auto"><ReportButton entryId={r.id} /></span>}
                 </div>
                 <p className="whitespace-pre-line text-neutral-300">{r.review}</p>
                 <ReviewSocial

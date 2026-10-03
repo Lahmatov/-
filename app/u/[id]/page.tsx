@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { logout } from "@/lib/actions";
 import { getProfile } from "@/lib/social";
+import { isAdmin } from "@/lib/moderation";
 import { Plural } from "@/lib/plural";
 import { BookRow } from "@/components/BookRow";
 import { FollowButton } from "@/components/FollowButton";
@@ -23,6 +24,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
   const profile = await getProfile(id, session?.user?.id ?? null);
   if (!profile) notFound();
   const { user, counts } = profile;
+  const admin = profile.isMe && (await isAdmin(session?.user?.id));
 
   return (
     <div className="space-y-8">
@@ -49,6 +51,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
             <Link href="/import" className="btn-ghost">
               Импорт Kindle / CSV
             </Link>
+            <a href="/export.csv" className="btn-ghost">
+              Экспорт в CSV
+            </a>
+            {admin && (
+              <Link href="/admin/reports" className="btn-ghost">
+                Модерация
+              </Link>
+            )}
             <form action={logout}>
               <button className="btn-ghost">Выйти</button>
             </form>

@@ -11,6 +11,8 @@ struct ProfileView: View {
     @State private var errorMessage: String?
     @State private var isEditingName = false
     @State private var nameText = ""
+    @State private var exportDocument: CSVDocument?
+    @State private var isExporting = false
 
     var body: some View {
         NavigationStack {
@@ -32,6 +34,16 @@ struct ProfileView: View {
                     }
                 } footer: {
                     Text("Имя видно в отзывах, ленте и профиле.")
+                }
+
+                if auth.user?.emailVerified == false {
+                    Section {
+                        Button("Отправить письмо ещё раз", systemImage: "envelope") { Task { await resendVerification() } }
+                    } header: {
+                        Text("Email не подтверждён")
+                    } footer: {
+                        Text("Подтвердите адрес по ссылке из письма — тогда пароль можно будет восстановить, если забудете.")
+                    }
                 }
 
                 Section {
@@ -57,6 +69,12 @@ struct ProfileView: View {
                 }
 
                 Section {
+                    Button("Экспорт в CSV", systemImage: "square.and.arrow.up") { Task { await prepareExport() } }
+                } footer: {
+                    Text("Файл в том же формате, что и импорт: его можно загрузить обратно или открыть в Excel и Numbers.")
+                }
+
+                Section {
                     Button("Выйти", role: .destructive) { Task { await auth.logout() } }
                     Button("Удалить аккаунт", role: .destructive) { confirmDelete = true }
                 }
@@ -78,6 +96,12 @@ struct ProfileView: View {
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
             }
+            .fileExporter(
+                isPresented: $isExporting,
+                document: exportDocument,
+                contentType: .commaSeparatedText,
+                defaultFilename: "bookshelf.csv"
+            ) { _ in }
             .fileImporter(
                 isPresented: $isImporterPresented,
                 allowedContentTypes: importKind == .kindle ? [.plainText] : [.commaSeparatedText, .plainText]
@@ -115,6 +139,24 @@ struct ProfileView: View {
         }
     }
 
+    private func resendVerification() async {
+        do {
+            try await auth.api.resendVerification()
+            infoMessage = L("Письмо отправлено — проверьте почту.")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func prepareExport() async {
+        do {
+            exportDocument = CSVDocument(data: try await auth.api.exportCSV())
+            isExporting = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     private func saveName() async {
         let name = nameText.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
@@ -131,5 +173,21 @@ struct ProfileView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+}
+
+/// CSV-файл для системного диалога «Сохранить в Файлы».
+struct CSVDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.commaSeparatedText] }
+    var data: Data
+
+    init(data: Data) { self.data = data }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
     }
 }

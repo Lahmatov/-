@@ -152,4 +152,12 @@ final class ModelsTests: XCTestCase {
         """)
         XCTAssertEqual(thread.comments.first?.user.name, "Борис")
     }
+
+    func testUserDecodesWithAndWithoutEmailVerified() throws {
+        let fresh = try decode(User.self, #"{"id":"u","name":"A","email":"a@x.ru","emailVerified":false}"#)
+        XCTAssertEqual(fresh.emailVerified, false)
+        let old = try decode(User.self, #"{"id":"u","name":"A","email":"a@x.ru"}"#)
+        XCTAssertNil(old.emailVerified)
+        XCTAssertEqual(ReportReason.allCases.map(\.rawValue), ["SPAM", "ABUSE", "SPOILER", "OTHER"])
+    }
 }

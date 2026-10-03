@@ -3,6 +3,7 @@ import { deleteCommentAction, toggleLike } from "@/lib/actions";
 import { timeAgo } from "@/lib/time";
 import { CommentForm } from "./CommentForm";
 import { SubmitButton } from "./SubmitButton";
+import { ReportButton } from "./ReportButton";
 
 type Comment = { id: string; text: string; createdAt: Date; user: { id: string; name: string | null } };
 
@@ -58,6 +59,11 @@ export function ReviewSocial(props: {
                     <form action={deleteCommentAction.bind(null, c.id, path)} className="ml-auto">
                       <button className="text-neutral-600 hover:text-red-400">удалить</button>
                     </form>
+                  )}
+                  {viewerId && viewerId !== c.user.id && (
+                    <span className={viewerId === props.reviewAuthorId ? "" : "ml-auto"}>
+                      <ReportButton commentId={c.id} />
+                    </span>
                   )}
                 </div>
                 <p className="whitespace-pre-line text-neutral-300">{c.text}</p>
