@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { recordActivity } from "./social";
 import { findDuplicate, makeSearchText } from "./books";
 import type { ImportedBook } from "./importers";
 import type { Status } from "./status";
@@ -30,11 +31,13 @@ export async function setShelfStatus(userId: string, bookId: string, status: Sta
     data.finishedAt = null;
   }
 
-  return db.shelfEntry.upsert({
+  const entry = await db.shelfEntry.upsert({
     where: { userId_bookId: { userId, bookId } },
     create: { userId, bookId, ...data },
     update: data,
   });
+  if (prev?.status !== status) await recordActivity(userId, bookId, "STATUS", { status });
+  return entry;
 }
 
 export type ReviewInput = {
@@ -50,11 +53,16 @@ export async function saveShelfReview(userId: string, bookId: string, data: Revi
   if (data.startedAt && data.finishedAt && data.startedAt > data.finishedAt) {
     return { error: "Дата окончания раньше даты начала" } as const;
   }
+  const prev = await db.shelfEntry.findUnique({ where: { userId_bookId: { userId, bookId } } });
   const entry = await db.shelfEntry.upsert({
     where: { userId_bookId: { userId, bookId } },
     create: { userId, bookId, status: "READ", ...data },
     update: data,
   });
+  // В ленту — только новая оценка или новый публичный отзыв.
+  const ratingChanged = data.rating !== null && data.rating !== prev?.rating;
+  const reviewChanged = data.isPublic && data.review !== null && data.review !== prev?.review;
+  if (ratingChanged || reviewChanged) await recordActivity(userId, bookId, "REVIEW", { rating: data.rating });
   return { entry } as const;
 }
 

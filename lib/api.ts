@@ -79,3 +79,20 @@ export const entryJSON = (e: ShelfEntry) => ({
   isPublic: e.isPublic,
   updatedAt: e.updatedAt,
 });
+
+export const publicUserJSON = (u: { id: string; name: string | null }) => ({ id: u.id, name: u.name ?? "Читатель" });
+
+export const listSummaryJSON = (l: {
+  id: string;
+  title: string;
+  description: string | null;
+  isPublic: boolean;
+  updatedAt?: Date;
+  _count?: { items: number };
+}) => ({
+  id: l.id,
+  title: l.title,
+  description: l.description,
+  isPublic: l.isPublic,
+  count: l._count?.items ?? 0,
+});

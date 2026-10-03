@@ -65,6 +65,10 @@ final class AuthStore {
         accept(try await api.signInWithGoogle(idToken: idToken))
     }
 
+    func updateName(_ name: String) async throws {
+        store(user: try await api.updateName(name))
+    }
+
     func logout() async {
         try? await api.logout()
         clearSession()

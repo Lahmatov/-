@@ -15,7 +15,7 @@ final class ModelsTests: XCTestCase {
          "myEntry":{"status":"READ","startedAt":"2026-09-01T00:00:00.000Z","finishedAt":"2026-10-01T10:00:00.000Z",
                     "rating":8,"review":"Песок!","isPublic":true,"updatedAt":"2026-10-03T11:16:54.534Z"},
          "stats":{"avgRating":8,"ratingsCount":1,"readersCount":1},
-         "reviews":[{"id":"r1","userName":"Аня","rating":null,"review":"Хорошо","updatedAt":"2026-10-03T11:16:54Z"}]}
+         "reviews":[{"id":"r1","userId":"u1","userName":"Аня","rating":null,"review":"Хорошо","updatedAt":"2026-10-03T11:16:54Z"}]}
         """
         let details = try decode(BookDetails.self, json)
         XCTAssertEqual(details.book.subtitle, "Фрэнк Герберт · 1965")
@@ -69,5 +69,41 @@ final class ModelsTests: XCTestCase {
         XCTAssertEqual(Plural.ru(11, "оценка", "оценки", "оценок"), "оценок")
         XCTAssertEqual(Plural.ru(21, "оценка", "оценки", "оценок"), "оценка")
         XCTAssertEqual(Plural.ru(0, "оценка", "оценки", "оценок"), "оценок")
+    }
+
+    func testISBN() {
+        XCTAssertEqual(ISBN.normalize("9780441013593"), "9780441013593")
+        XCTAssertEqual(ISBN.normalize("978-0-441-01359-3"), "9780441013593")
+        XCTAssertEqual(ISBN.normalize("0441013597"), "9780441013593")
+        XCTAssertEqual(ISBN.normalize("080442957X"), "9780804429573")
+        XCTAssertNil(ISBN.normalize("9780441013594"), "неверная контрольная цифра")
+        XCTAssertNil(ISBN.normalize("4600000000001"), "EAN-13 товара — не книга")
+    }
+
+    func testDecodesFeedAndProfile() throws {
+        let feed = try decode(Feed.self, """
+        {"followingCount":1,"nextCursor":null,"items":[
+          {"id":"a1","type":"REVIEW","status":null,"rating":9,"review":"Великолепно","createdAt":"2026-10-03T12:00:00.000Z",
+           "user":{"id":"u1","name":"Аня"},"book":{"id":"b1","title":"Дюна","author":"Фрэнк Герберт","year":1965,"isbn":null,"coverUrl":null}},
+          {"id":"a2","type":"STATUS","status":"READ","rating":null,"review":null,"createdAt":"2026-10-03T11:00:00.000Z",
+           "user":{"id":"u1","name":"Аня"},"book":{"id":"b1","title":"Дюна","author":"Фрэнк Герберт","year":1965,"isbn":null,"coverUrl":null}}]}
+        """)
+        XCTAssertEqual(feed.items.map(\.label), ["отзыв", "прочитано"])
+
+        let profile = try decode(UserProfile.self, """
+        {"user":{"id":"u1","name":"Аня"},"isMe":false,"isFollowing":true,"counts":{"followers":1,"following":0,"read":1},
+         "readingNow":[],"recentlyRead":[{"book":{"id":"b1","title":"Дюна","author":"Фрэнк Герберт","year":1965,"isbn":null,"coverUrl":null},
+         "rating":9,"finishedAt":"2026-10-03T12:00:00.000Z"}],
+         "lists":[{"id":"l1","title":"Фантастика","description":null,"isPublic":true,"count":1}]}
+        """)
+        XCTAssertTrue(profile.isFollowing)
+        XCTAssertEqual(profile.recentlyRead.first?.rating, 9)
+        XCTAssertEqual(profile.lists.first?.count, 1)
+
+        let lists = try decode([MyList].self, """
+        [{"id":"l1","title":"Ф","description":"Лучшее","isPublic":false,"count":2,
+          "covers":["https://covers.openlibrary.org/b/id/1-M.jpg"],"containsBook":true}]
+        """)
+        XCTAssertEqual(lists.first?.containsBook, true)
     }
 }

@@ -7,6 +7,7 @@ struct SearchView: View {
     @State private var isSearching = false
     @State private var addingKey: String?
     @State private var showAddBook = false
+    @State private var showScanner = false
     @State private var path = NavigationPath()
     @State private var errorMessage: String?
 
@@ -38,7 +39,19 @@ struct SearchView: View {
             .overlay(alignment: .top) {
                 if isSearching { ProgressView().padding(.top, 8) }
             }
-            .navigationDestination(for: BookRoute.self) { BookDetailView(bookId: $0.id) }
+            .appDestinations()
+            .toolbar {
+                Button("Сканировать штрихкод", systemImage: "barcode.viewfinder") { showScanner = true }
+            }
+            .sheet(isPresented: $showScanner) {
+                BarcodeScannerView { book in
+                    showScanner = false
+                    path.append(BookRoute(id: book.id))
+                } onNotFound: {
+                    showScanner = false
+                    showAddBook = true
+                }
+            }
             .sheet(isPresented: $showAddBook) {
                 AddBookView(initialTitle: trimmedQuery) { book in
                     showAddBook = false

@@ -121,6 +121,84 @@ final class APIClient {
         let _: OK = try await send("DELETE", "shelf/\(bookId)")
     }
 
+    func book(isbn: String) async throws -> Book {
+        let response: BookResponse = try await send("GET", "books/isbn/\(isbn)")
+        return response.book
+    }
+
+    // MARK: - Люди и лента
+
+    private struct UsersResponse: Decodable { let users: [PublicUser] }
+    private struct FollowResponse: Decodable { let isFollowing: Bool }
+    private struct UserResponse: Decodable { let user: User }
+
+    func feed(cursor: String? = nil) async throws -> Feed {
+        try await send("GET", "feed", query: cursor.map { [URLQueryItem(name: "cursor", value: $0)] } ?? [])
+    }
+
+    func searchUsers(_ query: String) async throws -> [PublicUser] {
+        let response: UsersResponse = try await send("GET", "users", query: [URLQueryItem(name: "q", value: query)])
+        return response.users
+    }
+
+    func profile(userId: String) async throws -> UserProfile {
+        try await send("GET", "users/\(userId)")
+    }
+
+    func setFollowing(_ follow: Bool, userId: String) async throws -> Bool {
+        let response: FollowResponse = try await send(follow ? "POST" : "DELETE", "users/\(userId)/follow")
+        return response.isFollowing
+    }
+
+    func following() async throws -> [PublicUser] {
+        let response: UsersResponse = try await send("GET", "me/following")
+        return response.users
+    }
+
+    func updateName(_ name: String) async throws -> User {
+        let response: UserResponse = try await send("PATCH", "me", json: ["name": name])
+        return response.user
+    }
+
+    // MARK: - Списки
+
+    private struct MyListsResponse: Decodable { let lists: [MyList] }
+    private struct ListResponse: Decodable { let list: ListSummary }
+
+    /// С bookId у каждого списка заполнено containsBook.
+    func myLists(bookId: String? = nil) async throws -> [MyList] {
+        let response: MyListsResponse = try await send(
+            "GET", "lists", query: bookId.map { [URLQueryItem(name: "bookId", value: $0)] } ?? []
+        )
+        return response.lists
+    }
+
+    func createList(_ input: ListInput) async throws -> ListSummary {
+        let response: ListResponse = try await send("POST", "lists", json: input)
+        return response.list
+    }
+
+    func list(id: String) async throws -> ListDetails {
+        try await send("GET", "lists/\(id)")
+    }
+
+    func updateList(id: String, _ input: ListInput) async throws -> ListSummary {
+        let response: ListResponse = try await send("PATCH", "lists/\(id)", json: input)
+        return response.list
+    }
+
+    func deleteList(id: String) async throws {
+        let _: OK = try await send("DELETE", "lists/\(id)")
+    }
+
+    func setBook(_ bookId: String, inList listId: String, _ included: Bool) async throws {
+        if included {
+            let _: OK = try await send("POST", "lists/\(listId)/items", json: ["bookId": bookId])
+        } else {
+            let _: OK = try await send("DELETE", "lists/\(listId)/items/\(bookId)")
+        }
+    }
+
     // MARK: - Итоги
 
     func stats(year: Int? = nil) async throws -> YearStats {

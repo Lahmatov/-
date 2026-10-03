@@ -10,7 +10,9 @@ import { db } from "./db";
 import { upsertFromOpenLibrary } from "./openlibrary";
 import { isStatus } from "./status";
 import { parseBooksCsv, parseKindleClippings, type ImportedBook } from "./importers";
-import { firstIssue, goalSchema, registerSchema } from "./validation";
+import { firstIssue, goalSchema, listSchema, nameSchema, registerSchema } from "./validation";
+import { follow, unfollow, updateName } from "./social";
+import { addToList, createList, deleteList, removeFromList, updateList } from "./lists";
 import { setGoal } from "./stats";
 import { createBook, importBooks, saveShelfReview, setShelfStatus } from "./shelf";
 
@@ -191,4 +193,76 @@ export async function saveGoal(year: number, _: FormState, formData: FormData): 
   await setGoal(userId, year, parsed.data.target);
   revalidatePath("/stats");
   return { message: parsed.data.target === null ? "Цель убрана" : "Цель сохранена" };
+}
+
+// ---------- Люди ----------
+
+export async function followUser(userId: string) {
+  const me = await requireUserId();
+  await follow(me, userId);
+  revalidatePath(`/u/${userId}`);
+  revalidatePath("/feed");
+}
+
+export async function unfollowUser(userId: string) {
+  const me = await requireUserId();
+  await unfollow(me, userId);
+  revalidatePath(`/u/${userId}`);
+  revalidatePath("/feed");
+}
+
+export async function saveName(_: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireUserId();
+  const parsed = nameSchema.safeParse({ name: formData.get("name") });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  await updateName(me, parsed.data.name);
+  revalidatePath(`/u/${me}`);
+  return { message: "Имя сохранено" };
+}
+
+// ---------- Списки ----------
+
+function listInput(formData: FormData) {
+  return listSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description"),
+    isPublic: formData.get("isPublic") === "on",
+  });
+}
+
+export async function createListAction(_: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireUserId();
+  const parsed = listInput(formData);
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const list = await createList(me, parsed.data);
+  const bookId = formData.get("bookId");
+  if (typeof bookId === "string" && bookId) {
+    await addToList(list.id, me, bookId);
+    revalidatePath(`/books/${bookId}`);
+    return { message: `Создан список «${list.title}», книга добавлена` };
+  }
+  redirect(`/lists/${list.id}`);
+}
+
+export async function updateListAction(listId: string, _: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireUserId();
+  const parsed = listInput(formData);
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  if (!(await updateList(listId, me, parsed.data))) return { error: "Список не найден" };
+  revalidatePath(`/lists/${listId}`);
+  return { message: "Сохранено" };
+}
+
+export async function deleteListAction(listId: string) {
+  const me = await requireUserId();
+  await deleteList(listId, me);
+  redirect("/lists");
+}
+
+export async function toggleListItem(listId: string, bookId: string, add: boolean) {
+  const me = await requireUserId();
+  if (add) await addToList(listId, me, bookId);
+  else await removeFromList(listId, me, bookId);
+  revalidatePath(`/lists/${listId}`);
+  revalidatePath(`/books/${bookId}`);
 }

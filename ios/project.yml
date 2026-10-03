@@ -40,6 +40,7 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: Камера нужна, чтобы сканировать штрихкод (ISBN) на обложке книги.
         # Адрес сервера и Google Client ID берутся из Config/*.xcconfig
         API_BASE_URL: $(API_BASE_URL)
         GIDClientID: $(GOOGLE_CLIENT_ID)

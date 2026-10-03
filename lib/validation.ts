@@ -46,3 +46,15 @@ export const goalSchema = z.object({
   // null — убрать цель
   target: z.number().int().min(1, "Цель — от 1 книги").max(1000, "Слишком большая цель").nullable(),
 });
+
+export const nameSchema = z.object({ name: z.string().trim().min(1, "Укажите имя").max(80, "Слишком длинное имя") });
+
+export const listSchema = z.object({
+  title: z.string().trim().min(1, "Укажите название списка").max(120, "Слишком длинное название"),
+  description: z
+    .string()
+    .max(1000, "Слишком длинное описание")
+    .nullish()
+    .transform((v) => v?.trim() || null),
+  isPublic: z.boolean().default(true),
+});

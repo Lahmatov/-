@@ -11,6 +11,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     stats: details.stats,
     reviews: details.reviews.map((r) => ({
       id: r.id,
+      userId: r.userId,
       userName: r.user.name ?? "Читатель",
       rating: r.rating,
       review: r.review,

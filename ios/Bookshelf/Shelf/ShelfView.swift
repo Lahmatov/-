@@ -39,7 +39,7 @@ struct ShelfView: View {
                 }
             }
             .navigationTitle("Мои книги")
-            .navigationDestination(for: BookRoute.self) { BookDetailView(bookId: $0.id) }
+            .appDestinations()
             // Перезагружаем при каждом появлении — например, после смены статуса на карточке книги.
             .task { await load() }
             .refreshable { await load() }

@@ -1,5 +1,7 @@
 import { db } from "./db";
 import { candidateFragments, scoreBook, tokenize } from "./search";
+import { isbn13to10 } from "./isbn";
+import { lookupOpenLibraryIsbn, upsertFromOpenLibrary } from "./openlibrary";
 
 export function normalize(text: string): string {
   return text.toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim();
@@ -45,4 +47,21 @@ export async function searchBooks(query: string, take = 30) {
 /** Находит уже существующую книгу с тем же названием и автором. */
 export async function findDuplicate(title: string, author: string) {
   return db.book.findFirst({ where: { searchText: makeSearchText(title, author) } });
+}
+
+/**
+ * Книга по ISBN: сначала в своём каталоге, потом в Open Library (найденная сохраняется в каталог).
+ * null — такой книги нигде нет; тогда её можно добавить вручную.
+ */
+export async function findByIsbn(isbn13: string, userId: string | null) {
+  const isbn10 = isbn13to10(isbn13);
+  const local = await db.book.findFirst({ where: { isbn: { in: isbn10 ? [isbn13, isbn10] : [isbn13] } } });
+  if (local) return local;
+
+  const hit = await lookupOpenLibraryIsbn(isbn13);
+  if (!hit) return null;
+  const book = await upsertFromOpenLibrary(hit, userId ?? undefined);
+  // Книга уже была в каталоге без ISBN — запомним его, чтобы следующий скан нашёл её сразу.
+  if (!book.isbn) return db.book.update({ where: { id: book.id }, data: { isbn: isbn13 } });
+  return book;
 }

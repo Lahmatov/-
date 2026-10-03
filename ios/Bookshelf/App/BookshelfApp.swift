@@ -24,6 +24,23 @@ struct BookRoute: Hashable {
     let id: String
 }
 
+struct UserRoute: Hashable {
+    let id: String
+}
+
+struct ListRoute: Hashable {
+    let id: String
+}
+
+extension View {
+    /// Переходы, общие для всех вкладок: книга, профиль человека, список.
+    func appDestinations() -> some View {
+        navigationDestination(for: BookRoute.self) { BookDetailView(bookId: $0.id) }
+            .navigationDestination(for: UserRoute.self) { UserProfileView(userId: $0.id) }
+            .navigationDestination(for: ListRoute.self) { ListDetailView(listId: $0.id) }
+    }
+}
+
 struct RootView: View {
     @Environment(AuthStore.self) private var auth
 
@@ -49,6 +66,8 @@ struct MainTabView: View {
                 .tabItem { Label("Полка", systemImage: "books.vertical") }
             SearchView()
                 .tabItem { Label("Поиск", systemImage: "magnifyingglass") }
+            FeedView()
+                .tabItem { Label("Лента", systemImage: "person.2") }
             StatsView()
                 .tabItem { Label("Итоги", systemImage: "chart.bar") }
             ProfileView()

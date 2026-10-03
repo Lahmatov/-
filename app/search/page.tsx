@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
-import { searchBooks } from "@/lib/books";
+import { findByIsbn, searchBooks } from "@/lib/books";
+import { normalizeIsbn } from "@/lib/isbn";
 import { searchOpenLibrary } from "@/lib/openlibrary";
 import { importFromOpenLibrary } from "@/lib/actions";
 import { BookRow } from "@/components/BookRow";
@@ -20,7 +21,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [local, remote] = await Promise.all([searchBooks(q), searchOpenLibrary(q)]);
+  // Ввели ISBN (например, с обложки) — сразу ищем эту книгу.
+  const isbn = normalizeIsbn(q);
+  const [local, remote] = isbn
+    ? [await findByIsbn(isbn, session?.user?.id ?? null).then((b) => (b ? [b] : [])), []]
+    : await Promise.all([searchBooks(q), searchOpenLibrary(q)]);
   const localKeys = new Set(local.map((b) => b.openLibraryKey).filter(Boolean));
   const extra = remote.filter((h) => !localKeys.has(h.key));
 

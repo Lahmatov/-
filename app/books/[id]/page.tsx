@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { getBookDetails } from "@/lib/shelf";
 import { STATUS_LABEL, isStatus, type Status } from "@/lib/status";
-import { removeFromShelf, setStatus } from "@/lib/actions";
+import Link from "next/link";
+import { removeFromShelf, setStatus, toggleListItem } from "@/lib/actions";
+import { getMyLists } from "@/lib/lists";
+import { ListForm } from "@/components/ListForm";
 import { BookCover } from "@/components/BookCover";
 import { ReviewForm } from "@/components/ReviewForm";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -51,6 +54,8 @@ export default async function BookPage({
   const details = await getBookDetails(id, userId ?? null);
   if (!details) notFound();
   const { book, mine, stats, reviews } = details;
+  const myLists = userId ? await getMyLists(userId, book.id) : null;
+  const inLists = myLists?.filter((l) => l.containsBook).length ?? 0;
   const myStatus = mine && isStatus(mine.status) ? mine.status : null;
 
   return (
@@ -122,8 +127,31 @@ export default async function BookPage({
         </section>
       ) : (
         <p className="text-neutral-400">
-          <a href="/login" className="text-amber-400 hover:underline">Войдите</a>, чтобы отмечать прочитанное и писать отзывы.
+          <Link href="/login" className="text-amber-400 hover:underline">Войдите</Link>, чтобы отмечать прочитанное и писать отзывы.
         </p>
+      )}
+
+      {userId && myLists && (
+        <details className="rounded-xl bg-neutral-900 p-4">
+          <summary className="cursor-pointer font-semibold">
+            В списки{inLists > 0 && <span className="ml-2 text-sm text-neutral-400">в {inLists}</span>}
+          </summary>
+          <div className="mt-3 space-y-2">
+            {myLists.map((l) => (
+              <form key={l.id} action={toggleListItem.bind(null, l.id, book.id, !l.containsBook)} className="flex items-center gap-3">
+                <SubmitButton className={l.containsBook ? "btn-primary py-1" : "btn-ghost py-1"}>
+                  {l.containsBook ? "✓" : "+"}
+                </SubmitButton>
+                <Link href={`/lists/${l.id}`} className="hover:underline">
+                  {l.title}
+                </Link>
+              </form>
+            ))}
+            <div className="pt-2">
+              <ListForm mode="create" bookId={book.id} />
+            </div>
+          </div>
+        </details>
       )}
 
       <section>
@@ -135,7 +163,9 @@ export default async function BookPage({
             {reviews.map((r) => (
               <article key={r.id} className="rounded-lg border border-neutral-800 p-4">
                 <div className="mb-2 flex items-center gap-3 text-sm">
-                  <span className="font-semibold">{r.user.name ?? "Читатель"}</span>
+                  <Link href={`/u/${r.userId}`} className="font-semibold hover:underline">
+                    {r.user.name ?? "Читатель"}
+                  </Link>
                   {r.rating && <span className="text-amber-400">★ {r.rating}/10</span>}
                   <span className="text-neutral-500">{fmt.format(r.updatedAt)}</span>
                 </div>

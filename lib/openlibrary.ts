@@ -77,3 +77,20 @@ export async function upsertFromOpenLibrary(hit: OpenLibraryHit, addedById?: str
     },
   });
 }
+
+/** Ищет книгу по ISBN в Open Library. null — не нашли или сервис недоступен. */
+export async function lookupOpenLibraryIsbn(isbn13: string): Promise<OpenLibraryHit | null> {
+  const url = `https://openlibrary.org/search.json?isbn=${isbn13}&fields=${FIELDS}&limit=1`;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Bookshelf/0.1 (book tracking app)" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { docs: OLDoc[] };
+    const hit = data.docs.map(toHit).find((h) => h !== null) ?? null;
+    return hit && { ...hit, isbn: isbn13 };
+  } catch {
+    return null;
+  }
+}

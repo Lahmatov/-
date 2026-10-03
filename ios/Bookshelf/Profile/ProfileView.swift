@@ -9,16 +9,41 @@ struct ProfileView: View {
     @State private var confirmDelete = false
     @State private var infoMessage: String?
     @State private var errorMessage: String?
+    @State private var isEditingName = false
+    @State private var nameText = ""
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(auth.user?.name ?? "Читатель").font(.headline)
-                        if let email = auth.user?.email {
-                            Text(email).font(.subheadline).foregroundStyle(.secondary)
+                    if let user = auth.user {
+                        NavigationLink(value: UserRoute(id: user.id)) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(user.name ?? "Читатель").font(.headline)
+                                if let email = user.email {
+                                    Text(email).font(.subheadline).foregroundStyle(.secondary)
+                                }
+                            }
                         }
+                    }
+                    Button("Изменить имя", systemImage: "pencil") {
+                        nameText = auth.user?.name ?? ""
+                        isEditingName = true
+                    }
+                } footer: {
+                    Text("Имя видно в отзывах, ленте и профиле.")
+                }
+
+                Section {
+                    NavigationLink {
+                        MyListsView()
+                    } label: {
+                        Label("Мои списки", systemImage: "list.bullet.rectangle")
+                    }
+                    NavigationLink {
+                        FollowingView()
+                    } label: {
+                        Label("Подписки", systemImage: "person.2")
                     }
                 }
 
@@ -40,6 +65,13 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Профиль")
+            .appDestinations()
+            .alert("Ваше имя", isPresented: $isEditingName) {
+                TextField("Имя", text: $nameText)
+                    .textContentType(.name)
+                Button("Сохранить") { Task { await saveName() } }
+                Button("Отмена", role: .cancel) {}
+            }
             .errorAlert($infoMessage, title: "Импорт завершён")
             .disabled(isImporting)
             .overlay {
@@ -81,6 +113,16 @@ struct ProfileView: View {
             defer { isImporting = false }
             let imported = try await auth.api.importFile(data, filename: url.lastPathComponent, kind: importKind)
             infoMessage = "Найдено книг: \(imported.found), добавлено на полку: \(imported.added)"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func saveName() async {
+        let name = nameText.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        do {
+            try await auth.updateName(name)
         } catch {
             errorMessage = error.localizedDescription
         }

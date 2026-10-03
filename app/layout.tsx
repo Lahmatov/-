@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
-import { logout } from "@/lib/actions";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,20 +20,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Link href="/" className="rounded bg-amber-500 px-2 py-1 text-sm font-black text-black">
               BOOKS
             </Link>
-            <form action="/search" className="min-w-0 flex-1">
+            <form action="/search" className="min-w-40 flex-1">
               <input name="q" placeholder="Название или автор…" className="input py-1.5" />
             </form>
             {session?.user ? (
               <nav className="flex items-center gap-3 text-sm">
-                <Link href="/stats" className="text-neutral-400 hover:text-neutral-100">
-                  Итоги
-                </Link>
-                <Link href="/import" className="text-neutral-400 hover:text-neutral-100">
-                  Импорт
-                </Link>
-                <form action={logout}>
-                  <button className="text-neutral-400 hover:text-neutral-100">Выйти</button>
-                </form>
+                {[
+                  ["/feed", "Лента"],
+                  ["/lists", "Списки"],
+                  ["/stats", "Итоги"],
+                  [`/u/${session.user.id}`, "Профиль"],
+                ].map(([href, label]) => (
+                  <Link key={href} href={href} className="text-neutral-400 hover:text-neutral-100">
+                    {label}
+                  </Link>
+                ))}
               </nav>
             ) : (
               <Link href="/login" className="btn-primary py-1.5">

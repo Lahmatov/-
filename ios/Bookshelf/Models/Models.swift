@@ -99,6 +99,7 @@ struct BookStats: Codable, Hashable, Sendable {
 
 struct Review: Codable, Identifiable, Hashable, Sendable {
     let id: String
+    let userId: String
     let userName: String
     let rating: Int?
     let review: String?
@@ -173,4 +174,107 @@ struct YearStats: Codable, Sendable {
     let avgRating: Double?
     let readingNow: Int
     let years: [Int]
+}
+
+// MARK: - Люди и лента
+
+struct PublicUser: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+}
+
+struct FeedItem: Codable, Identifiable, Hashable, Sendable {
+    enum Kind: String, Codable, Sendable {
+        case status = "STATUS"
+        case review = "REVIEW"
+    }
+
+    let id: String
+    let type: Kind
+    let status: ReadingStatus?
+    let rating: Int?
+    let review: String?
+    let createdAt: Date
+    let user: PublicUser
+    let book: Book
+
+    /// Подпись без глаголов прошедшего времени, чтобы не угадывать род.
+    var label: String {
+        switch type {
+        case .review:
+            return review == nil ? "оценка" : "отзыв"
+        case .status:
+            switch status {
+            case .want: return "хочет прочитать"
+            case .reading: return "читает"
+            case .paused: return "отложено"
+            case .read: return "прочитано"
+            case .dropped: return "брошено"
+            case nil: return ""
+            }
+        }
+    }
+}
+
+struct Feed: Codable, Sendable {
+    let followingCount: Int
+    let nextCursor: String?
+    let items: [FeedItem]
+}
+
+struct UserProfile: Codable, Sendable {
+    struct Counts: Codable, Sendable {
+        let followers: Int
+        let following: Int
+        let read: Int
+    }
+
+    struct ReadBook: Codable, Identifiable, Hashable, Sendable {
+        let book: Book
+        let rating: Int?
+        let finishedAt: Date?
+        var id: String { book.id }
+    }
+
+    let user: PublicUser
+    let isMe: Bool
+    var isFollowing: Bool
+    let counts: Counts
+    let readingNow: [Book]
+    let recentlyRead: [ReadBook]
+    let lists: [ListSummary]
+}
+
+// MARK: - Списки
+
+struct ListSummary: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String
+    let description: String?
+    let isPublic: Bool
+    let count: Int
+}
+
+/// Мой список с первыми обложками; containsBook есть, если список запрашивали для конкретной книги.
+struct MyList: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String
+    let description: String?
+    let isPublic: Bool
+    let count: Int
+    let covers: [URL]
+    let containsBook: Bool?
+}
+
+struct ListDetails: Codable, Sendable {
+    let list: ListSummary
+    let owner: PublicUser
+    let isOwner: Bool
+    let books: [Book]
+}
+
+struct ListInput: Encodable, Sendable {
+    var title: String
+    var description: String?
+    var isPublic: Bool
 }

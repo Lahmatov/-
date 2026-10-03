@@ -9,6 +9,7 @@ struct BookDetailView: View {
     @State private var errorMessage: String?
     @State private var isUpdating = false
     @State private var confirmRemove = false
+    @State private var showLists = false
 
     var body: some View {
         Group {
@@ -57,20 +58,26 @@ struct BookDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(details.reviews) { review in
-                        ReviewRow(review: review)
+                        NavigationLink(value: UserRoute(id: review.userId)) {
+                            ReviewRow(review: review)
+                        }
                     }
                 }
             }
         }
         .refreshable { await load() }
         .toolbar {
-            if details.myEntry != nil {
-                Menu {
+            Menu {
+                Button("В списки…", systemImage: "list.bullet.rectangle") { showLists = true }
+                if details.myEntry != nil {
                     Button("Убрать с полки", systemImage: "trash", role: .destructive) { confirmRemove = true }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
                 }
+            } label: {
+                Image(systemName: "ellipsis.circle")
             }
+        }
+        .sheet(isPresented: $showLists) {
+            AddToListSheet(bookId: details.book.id)
         }
         .confirmationDialog("Убрать книгу с полки?", isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Убрать", role: .destructive) { Task { await removeFromShelf() } }
