@@ -12,6 +12,11 @@ export async function POST(req: Request) {
   const key = `verify:${user.email}`;
   if (isRateLimited(key, 5)) return apiError("Слишком много запросов. Подождите 15 минут.", 429);
   recordFailure(key);
-  await sendVerificationEmail(user.email);
+  try {
+    await sendVerificationEmail(user.email);
+  } catch (e) {
+    console.error("verification email failed", e);
+    return apiError("Не удалось отправить письмо. Попробуйте позже.", 503);
+  }
   return json({ ok: true });
 }

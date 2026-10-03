@@ -32,4 +32,6 @@ test("экспорт читается нашим импортом обратно
 test("формулы в ячейках обезврежены", () => {
   const csv = toCsv([{ ...row, title: "=HYPERLINK(\"x\")", review: null }]);
   assert.ok(csv.includes(`"'=HYPERLINK(""x"")"`));
+  const tab = toCsv([{ ...row, title: "\t=1+1", review: null }]);
+  assert.ok(tab.includes("'\t=1+1"), "ведущая табуляция тоже обезврежена");
 });

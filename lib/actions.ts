@@ -352,7 +352,7 @@ export async function resendVerification() {
   const key = `verify:${email}`;
   if (isRateLimited(key, 5)) return;
   recordFailure(key);
-  await sendVerificationEmail(email);
+  await sendVerificationEmail(email).catch((e) => console.error("verification email failed", e));
 }
 
 export async function forgotPassword(_: FormState, formData: FormData): Promise<FormState> {
@@ -363,7 +363,8 @@ export async function forgotPassword(_: FormState, formData: FormData): Promise<
   const key = `reset:${(await headers()).get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown"}`;
   if (isRateLimited(key, 5)) return { error: "Слишком много запросов. Подождите 15 минут." };
   recordFailure(key);
-  await requestPasswordReset(parsed.data.email);
+  // Не ждём отправки: время ответа не должно выдавать, зарегистрирован ли адрес.
+  void requestPasswordReset(parsed.data.email).catch((e) => console.error("password reset email failed", e));
   return { message: "Если такой email зарегистрирован, мы отправили на него ссылку для сброса пароля." };
 }
 

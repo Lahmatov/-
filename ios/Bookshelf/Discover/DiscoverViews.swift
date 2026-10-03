@@ -194,10 +194,11 @@ struct GenreView: View {
         .navigationTitle(name)
         .task {
             do {
-                async let top = auth.api.top(genre: slug)
+                // Лучшие в жанре — дополнительный раздел: его ошибка не мешает показать все книги.
+                async let top = try? auth.api.top(genre: slug)
                 async let all = auth.api.genre(slug: slug)
-                best = try await top.top
                 books = try await all.books
+                best = await top?.top ?? []
             } catch {
                 errorMessage = error.localizedDescription
             }

@@ -161,3 +161,10 @@ final class ModelsTests: XCTestCase {
         XCTAssertEqual(ReportReason.allCases.map(\.rawValue), ["SPAM", "ABUSE", "SPOILER", "OTHER"])
     }
 }
+
+final class PathSegmentTests: XCTestCase {
+    func testAuthorNameIsOneSegment() {
+        XCTAssertEqual(APIClient.pathSegment("AC/DC?"), "AC%2FDC%3F")
+        XCTAssertEqual(APIClient.pathSegment("Лев Толстой"), "%D0%9B%D0%B5%D0%B2%20%D0%A2%D0%BE%D0%BB%D1%81%D1%82%D0%BE%D0%B9")
+    }
+}

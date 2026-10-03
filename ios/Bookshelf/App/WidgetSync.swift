@@ -27,4 +27,10 @@ enum WidgetSync {
         snapshot.save()
         WidgetCenter.shared.reloadAllTimelines()
     }
+
+    /// При выходе виджет не должен показывать полку прошлого аккаунта.
+    static func clear() {
+        WidgetSnapshot.clear()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
 }

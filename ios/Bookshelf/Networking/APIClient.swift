@@ -133,7 +133,7 @@ final class APIClient {
     private struct RecommendationsResponse: Decodable { let items: [Recommendation] }
 
     func author(name: String) async throws -> AuthorDetails {
-        try await send("GET", "authors/\(name)")
+        try await send("GET", "authors/\(Self.pathSegment(name))")
     }
 
     func genres() async throws -> [Genre] {
@@ -360,11 +360,19 @@ final class APIClient {
 
     // MARK: - Транспорт
 
+    /// Кодирует текст как один сегмент пути: «/» и «?» в имени автора не должны менять маршрут.
+    nonisolated static func pathSegment(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/?#;")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
+
     private func makeRequest(_ method: String, _ path: String, query: [URLQueryItem] = []) -> URLRequest {
-        var components = URLComponents(
-            url: baseURL.appendingPathComponent("api/v1").appendingPathComponent(path),
-            resolvingAgainstBaseURL: false
-        )!
+        // path уже закодирован: id и слаги — ASCII, произвольный текст проходит через pathSegment.
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        var basePath = components.percentEncodedPath
+        if basePath.hasSuffix("/") { basePath.removeLast() }
+        components.percentEncodedPath = basePath + "/api/v1/" + path
         if !query.isEmpty { components.queryItems = query }
         var request = URLRequest(url: components.url!)
         request.httpMethod = method

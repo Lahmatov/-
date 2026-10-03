@@ -12,6 +12,11 @@ final class PushManager {
     /// Вызывается после входа: спрашиваем разрешение (один раз) и регистрируемся в APNs.
     func enable(api: APIClient) async {
         self.api = api
+        // Сразу привязываем сохранённый токен к текущему аккаунту: иначе до ответа APNs
+        // уведомления прошлого аккаунта ещё могли бы приходить на это устройство.
+        if let token = UserDefaults.standard.string(forKey: tokenKey) {
+            try? await api.registerDevice(token: token)
+        }
         let center = UNUserNotificationCenter.current()
         let granted = (try? await center.requestAuthorization(options: [.alert, .badge, .sound])) ?? false
         if granted { UIApplication.shared.registerForRemoteNotifications() }

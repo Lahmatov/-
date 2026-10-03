@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   const key = `reset:${clientIp(req)}`;
   if (isRateLimited(key, 5)) return apiError("Слишком много запросов. Подождите 15 минут.", 429);
   recordFailure(key);
-  await requestPasswordReset(parsed.data.email);
+  // Не ждём отправки: время ответа не должно выдавать, зарегистрирован ли адрес.
+  void requestPasswordReset(parsed.data.email).catch((e) => console.error("password reset email failed", e));
   return json({ ok: true });
 }

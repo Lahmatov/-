@@ -99,6 +99,9 @@ final class AuthStore {
         api.token = nil
         Keychain.delete(Self.tokenKey)
         UserDefaults.standard.removeObject(forKey: Self.userKey)
+        #if canImport(WidgetKit)
+        WidgetSync.clear()
+        #endif
         state = .signedOut
     }
 }

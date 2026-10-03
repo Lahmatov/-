@@ -22,8 +22,8 @@ const HEADER = ["Title", "Author", "Year", "ISBN", "Status", "Rating", "Review",
 function cell(value: string | number | boolean | null): string {
   if (value === null) return "";
   let s = String(value);
-  // Ячейка, начинающаяся с =, +, -, @, в Excel может выполниться как формула.
-  if (/^[=+\-@]/.test(s)) s = `'${s}`;
+  // Ячейка, начинающаяся с =, +, -, @, табуляции или CR, в Excel может выполниться как формула.
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

@@ -39,6 +39,10 @@ struct WidgetSnapshot: Codable, Equatable {
         return try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
     }
 
+    static func clear() {
+        defaults?.removeObject(forKey: key)
+    }
+
     func save() {
         guard let data = try? JSONEncoder().encode(self) else { return }
         Self.defaults?.set(data, forKey: Self.key)
