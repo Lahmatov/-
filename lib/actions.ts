@@ -226,6 +226,13 @@ export async function saveName(_: FormState, formData: FormData): Promise<FormSt
 
 // ---------- Списки ----------
 
+/** Списки видны на /lists и в профиле владельца — обновляем обе страницы. */
+function revalidateLists(me: string, listId?: string) {
+  revalidatePath("/lists");
+  revalidatePath(`/u/${me}`);
+  if (listId) revalidatePath(`/lists/${listId}`);
+}
+
 function listInput(formData: FormData) {
   return listSchema.safeParse({
     title: formData.get("title"),
@@ -239,6 +246,7 @@ export async function createListAction(_: FormState, formData: FormData): Promis
   const parsed = listInput(formData);
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   const list = await createList(me, parsed.data);
+  revalidateLists(me, list.id);
   const bookId = formData.get("bookId");
   if (typeof bookId === "string" && bookId) {
     await addToList(list.id, me, bookId);
@@ -253,13 +261,14 @@ export async function updateListAction(listId: string, _: FormState, formData: F
   const parsed = listInput(formData);
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   if (!(await updateList(listId, me, parsed.data))) return { error: "Список не найден" };
-  revalidatePath(`/lists/${listId}`);
+  revalidateLists(me, listId);
   return { message: "Сохранено" };
 }
 
 export async function deleteListAction(listId: string) {
   const me = await requireUserId();
   await deleteList(listId, me);
+  revalidateLists(me);
   redirect("/lists");
 }
 
@@ -267,6 +276,6 @@ export async function toggleListItem(listId: string, bookId: string, add: boolea
   const me = await requireUserId();
   if (add) await addToList(listId, me, bookId);
   else await removeFromList(listId, me, bookId);
-  revalidatePath(`/lists/${listId}`);
+  revalidateLists(me, listId);
   revalidatePath(`/books/${bookId}`);
 }

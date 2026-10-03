@@ -64,22 +64,24 @@ export async function getProfile(userId: string, viewerId: string | null) {
   const user = await db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, image: true } });
   if (!user) return null;
   const isMe = viewerId === userId;
+  // Записи, скрытые владельцем («не показывать другим»), видит только он сам.
+  const visible = isMe ? {} : { isPublic: true };
 
   const [followers, following, readCount, isFollowing, readingNow, recentlyRead, lists] = await Promise.all([
     db.follow.count({ where: { followingId: userId } }),
     db.follow.count({ where: { followerId: userId } }),
-    db.shelfEntry.count({ where: { userId, status: "READ" } }),
+    db.shelfEntry.count({ where: { userId, status: "READ", ...visible } }),
     viewerId && !isMe
       ? db.follow.count({ where: { followerId: viewerId, followingId: userId } }).then((n) => n > 0)
       : false,
     db.shelfEntry.findMany({
-      where: { userId, status: "READING" },
+      where: { userId, status: "READING", ...visible },
       include: { book: true },
       orderBy: { updatedAt: "desc" },
       take: 10,
     }),
     db.shelfEntry.findMany({
-      where: { userId, status: "READ" },
+      where: { userId, status: "READ", ...visible },
       include: { book: true },
       orderBy: [{ finishedAt: "desc" }, { updatedAt: "desc" }],
       take: 12,
@@ -97,7 +99,6 @@ export async function getProfile(userId: string, viewerId: string | null) {
     isFollowing,
     counts: { followers, following, read: readCount },
     readingNow,
-    // Оценку показываем всегда, отзыв — только публичный (он виден на странице книги).
     recentlyRead,
     lists,
   };
@@ -128,19 +129,20 @@ export async function getFeed(viewerId: string, cursor?: string | null, take = 3
   });
   const page = activities.slice(0, take);
 
-  // Тексты отзывов подтягиваем из полки — только публичные.
-  const reviewKeys = page.filter((a) => a.type === "REVIEW");
-  const entries = reviewKeys.length
+  // Событие показываем, только если запись на полке сейчас публичная: скрытая владельцем
+  // или удалённая с полки книга пропадает из ленты. Текст отзыва берём оттуда же.
+  const entries = page.length
     ? await db.shelfEntry.findMany({
-        where: { OR: reviewKeys.map((a) => ({ userId: a.userId, bookId: a.bookId })), isPublic: true },
+        where: { OR: page.map((a) => ({ userId: a.userId, bookId: a.bookId })), isPublic: true },
         select: { userId: true, bookId: true, review: true },
       })
     : [];
-  const reviewOf = (a: { userId: string; bookId: string }) =>
-    entries.find((e) => e.userId === a.userId && e.bookId === a.bookId)?.review ?? null;
+  const entryOf = (a: { userId: string; bookId: string }) =>
+    entries.find((e) => e.userId === a.userId && e.bookId === a.bookId);
+  const reviewOf = (a: { userId: string; bookId: string }) => entryOf(a)?.review ?? null;
 
   return {
-    items: page.map((a) => ({
+    items: page.filter((a) => entryOf(a)).map((a) => ({
       id: a.id,
       type: a.type,
       status: a.status,

@@ -58,7 +58,7 @@ export function ReviewForm({ bookId, entry }: { bookId: string; entry: Entry }) 
 
       <label className="flex items-center gap-2 text-sm text-neutral-300">
         <input type="checkbox" name="isPublic" defaultChecked={entry.isPublic} className="accent-amber-500" />
-        Показывать отзыв другим читателям
+        Показывать другим — в профиле, ленте и отзывах
       </label>
 
       <div className="flex items-center gap-4">

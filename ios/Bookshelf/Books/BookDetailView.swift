@@ -245,7 +245,7 @@ private struct ReviewEditor: View {
         TextField("Что думаете о книге?", text: $review, axis: .vertical)
             .lineLimit(3...12)
 
-        Toggle("Виден другим читателям", isOn: $isPublic)
+        Toggle("Видно другим — в профиле, ленте и отзывах", isOn: $isPublic)
 
         Button {
             Task { await save() }

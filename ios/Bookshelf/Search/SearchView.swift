@@ -8,6 +8,9 @@ struct SearchView: View {
     @State private var addingKey: String?
     @State private var showAddBook = false
     @State private var showScanner = false
+    /// «Добавить вручную» из сканера: форму открываем после того, как сканер закроется,
+    /// иначе SwiftUI не покажет второй sheet, пока первый ещё уходит с экрана.
+    @State private var pendingManualAdd = false
     @State private var path = NavigationPath()
     @State private var errorMessage: String?
 
@@ -43,13 +46,18 @@ struct SearchView: View {
             .toolbar {
                 Button("Сканировать штрихкод", systemImage: "barcode.viewfinder") { showScanner = true }
             }
-            .sheet(isPresented: $showScanner) {
+            .sheet(isPresented: $showScanner, onDismiss: {
+                if pendingManualAdd {
+                    pendingManualAdd = false
+                    showAddBook = true
+                }
+            }) {
                 BarcodeScannerView { book in
                     showScanner = false
                     path.append(BookRoute(id: book.id))
                 } onNotFound: {
+                    pendingManualAdd = true
                     showScanner = false
-                    showAddBook = true
                 }
             }
             .sheet(isPresented: $showAddBook) {
