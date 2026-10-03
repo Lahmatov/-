@@ -18,6 +18,8 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/prisma ./prisma
+# prisma/seed.ts (запускается при старте) импортирует код из lib/
+COPY --from=build /app/lib ./lib
 COPY --from=build /app/assets ./assets
 VOLUME /data
 EXPOSE 3000
