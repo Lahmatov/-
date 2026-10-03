@@ -62,7 +62,7 @@ struct SignInView: View {
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    SecureField(mode == .register ? "Пароль (от 8 символов)" : "Пароль", text: $password)
+                    SecureField(mode == .register ? L("Пароль (от 8 символов)") : L("Пароль"), text: $password)
                         .textContentType(mode == .register ? .newPassword : .password)
                 }
                 .textFieldStyle(.roundedBorder)
@@ -70,7 +70,7 @@ struct SignInView: View {
                 Button {
                     Task { await submit() }
                 } label: {
-                    Text(mode == .login ? "Войти" : "Создать аккаунт")
+                    Text(mode == .login ? L("Войти") : L("Создать аккаунт"))
                         .frame(maxWidth: .infinity, minHeight: 38)
                 }
                 .buttonStyle(.borderedProminent)
@@ -127,7 +127,7 @@ struct SignInView: View {
                   let data = credential.identityToken,
                   let token = String(data: data, encoding: .utf8)
             else {
-                errorMessage = "Apple не вернул токен входа"
+                errorMessage = L("Apple не вернул токен входа")
                 return
             }
             // Имя Apple отдаёт только при первом входе.

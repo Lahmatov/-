@@ -128,10 +128,10 @@ struct AuthorView: View {
             if let author {
                 Section {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(author.books.count) \(Plural.ru(author.books.count, "книга", "книги", "книг")) в каталоге")
+                        Text(L("%@ в каталоге", "\(author.books.count) \(Plural.localized(author.books.count, "книга", "книги", "книг"))"))
                         if let avg = author.avgRating {
                             Label(
-                                "\(String(format: "%.1f", avg)) · \(author.ratingsCount) \(Plural.ru(author.ratingsCount, "оценка", "оценки", "оценок"))",
+                                "\(String(format: "%.1f", avg)) · \(author.ratingsCount) \(Plural.localized(author.ratingsCount, "оценка", "оценки", "оценок"))",
                                 systemImage: "star.fill"
                             )
                             .foregroundStyle(.orange)

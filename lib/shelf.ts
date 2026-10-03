@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { recordActivity } from "./social";
 import { bookGenres } from "./genres";
+import type { Lang } from "./i18n";
 import { findDuplicate, makeSearchText } from "./books";
 import type { ImportedBook } from "./importers";
 import type { Status } from "./status";
@@ -104,7 +105,7 @@ export async function importBooks(userId: string, items: ImportedBook[]) {
 }
 
 /** Всё для страницы книги: сама книга, моя запись, статистика и чужие публичные отзывы. */
-export async function getBookDetails(bookId: string, userId: string | null) {
+export async function getBookDetails(bookId: string, userId: string | null, lang: Lang = "ru") {
   const book = await db.book.findUnique({ where: { id: bookId } });
   if (!book) return null;
   const [mine, stats, readers, reviews, genres] = await Promise.all([
@@ -121,7 +122,7 @@ export async function getBookDetails(bookId: string, userId: string | null) {
       orderBy: { updatedAt: "desc" },
       take: 50,
     }),
-    bookGenres(bookId),
+    bookGenres(bookId, lang),
   ]);
   return {
     book,

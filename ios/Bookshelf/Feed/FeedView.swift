@@ -67,7 +67,7 @@ struct FeedView: View {
                 } label: {
                     Image(systemName: unread > 0 ? "bell.badge" : "bell")
                 }
-                .accessibilityLabel(unread > 0 ? "Уведомления, новых: \(unread)" : "Уведомления")
+                .accessibilityLabel(unread > 0 ? L("Уведомления, новых: %@", String(unread)) : L("Уведомления"))
             }
             .searchable(text: $query, prompt: "Найти людей по имени")
             .task(id: trimmedQuery) { await searchPeople(trimmedQuery) }
@@ -82,7 +82,7 @@ struct FeedView: View {
     private var peopleSection: some View {
         let others = people.filter { $0.id != auth.user?.id }
         if others.isEmpty {
-            Text(trimmedQuery.count < 2 ? "Введите хотя бы две буквы" : "Никого не нашли")
+            Text(trimmedQuery.count < 2 ? L("Введите хотя бы две буквы") : L("Никого не нашли"))
                 .foregroundStyle(.secondary)
         } else {
             Section("Люди") {

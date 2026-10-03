@@ -19,7 +19,7 @@ struct ProfileView: View {
                     if let user = auth.user {
                         NavigationLink(value: UserRoute(id: user.id)) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(user.name ?? "Читатель").font(.headline)
+                                Text(user.name ?? L("Читатель")).font(.headline)
                                 if let email = user.email {
                                     Text(email).font(.subheadline).foregroundStyle(.secondary)
                                 }
@@ -53,10 +53,7 @@ struct ProfileView: View {
                 } header: {
                     Text("Импорт")
                 } footer: {
-                    Text("""
-                    Kindle: подключите его к компьютеру, скопируйте documents/My Clippings.txt в «Файлы» и выберите здесь. \
-                    У Apple Books нет экспорта — перенесите список в CSV с колонками Title, Author, Year, Status.
-                    """)
+                    Text(L("Kindle: подключите его к компьютеру, скопируйте documents/My Clippings.txt в «Файлы» и выберите здесь. У Apple Books нет экспорта — перенесите список в CSV с колонками Title, Author, Year, Status."))
                 }
 
                 Section {
@@ -112,7 +109,7 @@ struct ProfileView: View {
             isImporting = true
             defer { isImporting = false }
             let imported = try await auth.api.importFile(data, filename: url.lastPathComponent, kind: importKind)
-            infoMessage = "Найдено книг: \(imported.found), добавлено на полку: \(imported.added)"
+            infoMessage = L("Найдено книг: %@, добавлено на полку: %@", String(imported.found), String(imported.added))
         } catch {
             errorMessage = error.localizedDescription
         }

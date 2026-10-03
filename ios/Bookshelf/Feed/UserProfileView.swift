@@ -52,7 +52,7 @@ struct UserProfileView: View {
                     Button {
                         Task { await toggleFollow() }
                     } label: {
-                        Text(profile.isFollowing ? "Вы подписаны" : "Подписаться")
+                        Text(profile.isFollowing ? L("Вы подписаны") : L("Подписаться"))
                             .frame(maxWidth: .infinity, minHeight: 30)
                     }
                     .buttonStyle(.borderedProminent)
@@ -103,9 +103,9 @@ struct UserProfileView: View {
 
     private func countsText(_ counts: UserProfile.Counts) -> String {
         [
-            "\(counts.read) \(Plural.ru(counts.read, "книга", "книги", "книг"))",
-            "\(counts.followers) \(Plural.ru(counts.followers, "подписчик", "подписчика", "подписчиков"))",
-            "\(counts.following) \(Plural.ru(counts.following, "подписка", "подписки", "подписок"))",
+            "\(counts.read) \(Plural.localized(counts.read, "книга", "книги", "книг"))",
+            "\(counts.followers) \(Plural.localized(counts.followers, "подписчик", "подписчика", "подписчиков"))",
+            "\(counts.following) \(Plural.localized(counts.following, "подписка", "подписки", "подписок"))",
         ].joined(separator: " · ")
     }
 

@@ -13,11 +13,11 @@ enum ReadingStatus: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .want: "Хочу прочитать"
-        case .reading: "Читаю"
-        case .paused: "Отложил"
-        case .read: "Прочитал"
-        case .dropped: "Бросил"
+        case .want: L("Хочу прочитать")
+        case .reading: L("Читаю")
+        case .paused: L("Отложил")
+        case .read: L("Прочитал")
+        case .dropped: L("Бросил")
         }
     }
 
@@ -40,24 +40,24 @@ enum ReadingStatus: String, Codable, CaseIterable, Identifiable, Sendable {
     static func actions(for current: ReadingStatus?) -> [Action] {
         switch current {
         case nil:
-            [.init(target: .reading, title: "Начал читать"),
-             .init(target: .want, title: "Хочу прочитать"),
-             .init(target: .read, title: "Уже прочитал")]
+            [.init(target: .reading, title: L("Начал читать")),
+             .init(target: .want, title: L("Хочу прочитать")),
+             .init(target: .read, title: L("Уже прочитал"))]
         case .want:
-            [.init(target: .reading, title: "Начал читать"),
-             .init(target: .read, title: "Уже прочитал")]
+            [.init(target: .reading, title: L("Начал читать")),
+             .init(target: .read, title: L("Уже прочитал"))]
         case .reading:
-            [.init(target: .read, title: "Закончил читать"),
-             .init(target: .paused, title: "Отложить"),
-             .init(target: .dropped, title: "Бросил")]
+            [.init(target: .read, title: L("Закончил читать")),
+             .init(target: .paused, title: L("Отложить")),
+             .init(target: .dropped, title: L("Бросил"))]
         case .paused:
-            [.init(target: .reading, title: "Продолжить"),
-             .init(target: .read, title: "Закончил читать"),
-             .init(target: .dropped, title: "Бросил")]
+            [.init(target: .reading, title: L("Продолжить")),
+             .init(target: .read, title: L("Закончил читать")),
+             .init(target: .dropped, title: L("Бросил"))]
         case .read:
-            [.init(target: .reading, title: "Перечитать")]
+            [.init(target: .reading, title: L("Перечитать"))]
         case .dropped:
-            [.init(target: .reading, title: "Начать заново")]
+            [.init(target: .reading, title: L("Начать заново"))]
         }
     }
 }
@@ -227,14 +227,14 @@ struct FeedItem: Codable, Identifiable, Hashable, Sendable {
     var label: String {
         switch type {
         case .review:
-            return review == nil ? "оценка" : "отзыв"
+            return review == nil ? L("оценка") : L("отзыв")
         case .status:
             switch status {
-            case .want: return "хочет прочитать"
-            case .reading: return "читает"
-            case .paused: return "отложено"
-            case .read: return "прочитано"
-            case .dropped: return "брошено"
+            case .want: return L("хочет прочитать")
+            case .reading: return L("читает")
+            case .paused: return L("отложено")
+            case .read: return L("прочитано")
+            case .dropped: return L("брошено")
             case nil: return ""
             }
         }

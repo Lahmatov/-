@@ -7,3 +7,8 @@ test("тексты уведомлений без угадывания рода",
   assert.equal(notificationText("LIKE", "Аня", "Дюна"), "Аня: ♥ вашему отзыву на «Дюна»");
   assert.equal(notificationText("COMMENT", "Борис"), "Борис: новый комментарий к отзыву");
 });
+
+test("английские тексты уведомлений", () => {
+  assert.equal(notificationText("FOLLOW", "Anna", null, "en"), "Anna started following you");
+  assert.equal(notificationText("LIKE", "Bob", "Dune", "en"), "Bob liked your review of “Dune”");
+});

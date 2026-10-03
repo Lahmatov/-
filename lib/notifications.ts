@@ -1,10 +1,23 @@
 import { db } from "./db";
 import { pushToUser } from "./push";
+import type { Lang } from "./i18n";
 
 export type NotificationType = "FOLLOW" | "LIKE" | "COMMENT";
 
 /** Текст уведомления без глаголов прошедшего времени — не угадываем род. */
-export function notificationText(type: string, actorName: string, bookTitle?: string | null): string {
+export function notificationText(type: string, actorName: string, bookTitle?: string | null, lang: Lang = "ru"): string {
+  if (lang === "en") {
+    switch (type) {
+      case "FOLLOW":
+        return `${actorName} started following you`;
+      case "LIKE":
+        return `${actorName} liked your review${bookTitle ? ` of “${bookTitle}”` : ""}`;
+      case "COMMENT":
+        return `${actorName} commented on your review${bookTitle ? ` of “${bookTitle}”` : ""}`;
+      default:
+        return actorName;
+    }
+  }
   switch (type) {
     case "FOLLOW":
       return `${actorName} — новый подписчик`;
@@ -30,11 +43,14 @@ export async function notify(userId: string, actorId: string, type: Notification
     db.user.findUnique({ where: { id: actorId }, select: { name: true } }),
     entryId ? db.shelfEntry.findUnique({ where: { id: entryId }, include: { book: { select: { title: true } } } }) : null,
   ]);
-  // Не ждём APNs — запрос пользователя не должен тормозить из-за push.
-  void pushToUser(userId, "Книжная полка", notificationText(type, actor?.name ?? "Читатель", entry?.book.title));
+  // Не ждём APNs — запрос пользователя не должен тормозить из-за push. Текст — на языке каждого устройства.
+  void pushToUser(userId, (lang) => ({
+    title: lang === "en" ? "Bookshelf" : "Книжная полка",
+    body: notificationText(type, actor?.name ?? (lang === "en" ? "Reader" : "Читатель"), entry?.book.title, lang),
+  }));
 }
 
-export async function listNotifications(userId: string, take = 50) {
+export async function listNotifications(userId: string, lang: Lang = "ru", take = 50) {
   const rows = await db.notification.findMany({
     where: { userId },
     include: { actor: { select: { id: true, name: true } } },
@@ -52,9 +68,9 @@ export async function listNotifications(userId: string, take = 50) {
       type: r.type,
       read: r.read,
       createdAt: r.createdAt,
-      actor: { id: r.actor.id, name: r.actor.name ?? "Читатель" },
+      actor: { id: r.actor.id, name: r.actor.name ?? (lang === "en" ? "Reader" : "Читатель") },
       book,
-      text: notificationText(r.type, r.actor.name ?? "Читатель", book?.title),
+      text: notificationText(r.type, r.actor.name ?? (lang === "en" ? "Reader" : "Читатель"), book?.title, lang),
     };
   });
 }
@@ -65,8 +81,8 @@ export async function markAllRead(userId: string) {
   await db.notification.updateMany({ where: { userId, read: false }, data: { read: true } });
 }
 
-export async function registerDevice(userId: string, token: string) {
-  await db.deviceToken.upsert({ where: { token }, create: { token, userId }, update: { userId } });
+export async function registerDevice(userId: string, token: string, lang: Lang = "ru") {
+  await db.deviceToken.upsert({ where: { token }, create: { token, userId, lang }, update: { userId, lang } });
 }
 
 export async function unregisterDevice(userId: string, token: string) {

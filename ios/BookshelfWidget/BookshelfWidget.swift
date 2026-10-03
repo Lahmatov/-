@@ -62,7 +62,7 @@ struct ReadingWidgetView: View {
                 VStack(spacing: 0) {
                     Text("\(s.readThisYear)").font(.title.bold())
                     if let goal = s.goal {
-                        Text("из \(goal)").font(.caption2).foregroundStyle(.secondary)
+                        Text(L("из %@", String(goal))).font(.caption2).foregroundStyle(.secondary)
                     }
                 }
             }

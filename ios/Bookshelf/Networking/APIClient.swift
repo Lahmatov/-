@@ -10,9 +10,9 @@ enum APIError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .unauthorized: "Сессия истекла — войдите снова."
+        case .unauthorized: L("Сессия истекла — войдите снова.")
         case .server(let message): message
-        case .invalidResponse: "Сервер вернул непонятный ответ."
+        case .invalidResponse: L("Сервер вернул непонятный ответ.")
         }
     }
 }
@@ -342,6 +342,8 @@ final class APIClient {
         request.httpMethod = method
         request.timeoutInterval = 20
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        // Жанры, причины рекомендаций и тексты уведомлений сервер отдаёт на языке интерфейса.
+        request.setValue(AppLanguage.isEnglish ? "en" : "ru", forHTTPHeaderField: "Accept-Language")
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         return request
     }
@@ -377,6 +379,6 @@ final class APIClient {
             onUnauthorized?()
             throw APIError.unauthorized
         }
-        throw APIError.server(message ?? "Ошибка сервера (\(http.statusCode))")
+        throw APIError.server(message ?? L("Ошибка сервера (%@)", String(http.statusCode)))
     }
 }

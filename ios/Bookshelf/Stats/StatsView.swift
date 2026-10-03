@@ -10,9 +10,8 @@ struct StatsView: View {
     @State private var goalText = ""
     @State private var errorMessage: String?
 
-    private static let months = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
-    private static let monthsFull = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-                                     "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+    private static var months: [String] { DateCoding.monthNames(short: true) }
+    private static var monthsFull: [String] { DateCoding.monthNames().map { $0.capitalized(with: AppLanguage.locale) } }
 
     var body: some View {
         NavigationStack {
@@ -36,7 +35,7 @@ struct StatsView: View {
             }
             .task(id: year) { await load() }
             .refreshable { await load() }
-            .alert("Цель на \(String(year))", isPresented: $isEditingGoal) {
+            .alert(L("Цель на %@", String(year)), isPresented: $isEditingGoal) {
                 TextField("Сколько книг", text: $goalText)
                     .keyboardType(.numberPad)
                 Button("Сохранить") { Task { await saveGoal(Int(goalText)) } }
@@ -70,7 +69,7 @@ struct StatsView: View {
                         ProgressView(value: min(Double(stats.readCount), Double(goal)), total: Double(goal))
                             .tint(.accentColor)
                     }
-                    Button(stats.goal == nil ? "Поставить цель на год" : "Изменить цель") {
+                    Button(stats.goal == nil ? L("Поставить цель на год") : L("Изменить цель")) {
                         goalText = stats.goal.map(String.init) ?? ""
                         isEditingGoal = true
                     }
@@ -84,7 +83,7 @@ struct StatsView: View {
                 NavigationLink {
                     WrappedView(year: stats.year)
                 } label: {
-                    Label("Итоги \(String(stats.year)) картинкой", systemImage: "sparkles")
+                    Label(L("Итоги %@ картинкой", String(stats.year)), systemImage: "sparkles")
                 }
             }
 
@@ -95,7 +94,7 @@ struct StatsView: View {
 
             Section("Прочитано по месяцам") {
                 if stats.readCount == 0 {
-                    Text("В \(String(stats.year)) году пока нет прочитанных книг")
+                    Text(L("В %@ году пока нет прочитанных книг", String(stats.year)))
                         .foregroundStyle(.secondary)
                 } else {
                     monthChart(stats.byMonth)
@@ -109,8 +108,8 @@ struct StatsView: View {
         let selectedIndex = selectedMonth.flatMap { Self.months.firstIndex(of: $0) }
         return VStack(alignment: .leading, spacing: 8) {
             // Подсказка вместо наведения: коснитесь или проведите пальцем по графику.
-            Text(selectedIndex.map { "\(Self.monthsFull[$0]): \(byMonth[$0]) \(Plural.ru(byMonth[$0], "книга", "книги", "книг"))" }
-                 ?? "Коснитесь столбца, чтобы увидеть число")
+            Text(selectedIndex.map { "\(Self.monthsFull[$0]): \(byMonth[$0]) \(Plural.localized(byMonth[$0], "книга", "книги", "книг"))" }
+                 ?? L("Коснитесь столбца, чтобы увидеть число"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Chart {
@@ -142,9 +141,9 @@ struct StatsView: View {
     }
 
     private func summary(_ stats: YearStats) -> String {
-        let books = Plural.ru(stats.readCount, "книга прочитана", "книги прочитано", "книг прочитано")
+        let books = Plural.localized(stats.readCount, "книга прочитана", "книги прочитано", "книг прочитано")
         let done = stats.goal.map { stats.readCount >= $0 } ?? false
-        return "\(books) в \(String(stats.year)) году" + (done ? " — цель выполнена!" : "")
+        return L("%@ в %@ году", books, String(stats.year)) + (done ? L(" — цель выполнена!") : "")
     }
 
     private func load() async {
@@ -157,7 +156,7 @@ struct StatsView: View {
 
     private func saveGoal(_ target: Int?) async {
         if let target, !(1...1000).contains(target) {
-            errorMessage = "Цель — от 1 до 1000 книг"
+            errorMessage = L("Цель — от 1 до 1000 книг")
             return
         }
         do {

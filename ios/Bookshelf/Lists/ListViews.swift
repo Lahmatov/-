@@ -8,7 +8,7 @@ struct ListSummaryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.headline)
-            Text("\(count) \(Plural.ru(count, "книга", "книги", "книг"))" + (isPublic ? "" : " · личный"))
+            Text("\(count) \(Plural.localized(count, "книга", "книги", "книг"))" + (isPublic ? "" : L(" · личный")))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -106,14 +106,14 @@ struct ListDetailView: View {
                     Text(description)
                 }
                 NavigationLink(value: UserRoute(id: details.owner.id)) {
-                    Text("Список: \(details.owner.name)" + (details.list.isPublic ? "" : " · личный"))
+                    Text(L("Список: %@", details.owner.name) + (details.list.isPublic ? "" : L(" · личный")))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
             Section {
                 if details.books.isEmpty {
-                    Text(details.isOwner ? "Добавляйте книги через меню «⋯» на странице книги" : "В списке пока нет книг")
+                    Text(details.isOwner ? L("Добавляйте книги через меню «⋯» на странице книги") : L("В списке пока нет книг"))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(details.books) { book in
@@ -206,7 +206,7 @@ struct ListEditorView: View {
                     .lineLimit(2...6)
                 Toggle("Виден в моём профиле", isOn: $isPublic)
             }
-            .navigationTitle(existing == nil ? "Новый список" : "Список")
+            .navigationTitle(existing == nil ? L("Новый список") : L("Список"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -216,7 +216,7 @@ struct ListEditorView: View {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button(existing == nil ? "Создать" : "Сохранить") { Task { await save() } }
+                        Button(existing == nil ? L("Создать") : L("Сохранить")) { Task { await save() } }
                             .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }

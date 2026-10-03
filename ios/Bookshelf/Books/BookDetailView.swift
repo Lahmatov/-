@@ -111,7 +111,7 @@ struct BookDetailView: View {
                     }
                     .buttonStyle(.borderless)
                 }
-                let meta = [details.book.year.map(String.init), details.book.pageCount.map { "\($0) стр." }].compactMap { $0 }
+                let meta = [details.book.year.map(String.init), details.book.pageCount.map { L("%@ стр.", String($0)) }].compactMap { $0 }
                 if !meta.isEmpty {
                     Text(meta.joined(separator: " · "))
                         .font(.subheadline)
@@ -122,7 +122,7 @@ struct BookDetailView: View {
                         Text(details.stats.avgRating.map { String(format: "★ %.1f", $0) } ?? "—")
                             .font(.title3.bold())
                             .foregroundStyle(.orange)
-                        Text("\(details.stats.ratingsCount) \(Plural.ru(details.stats.ratingsCount, "оценка", "оценки", "оценок"))")
+                        Text("\(details.stats.ratingsCount) \(Plural.localized(details.stats.ratingsCount, "оценка", "оценки", "оценок"))")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -161,7 +161,7 @@ struct BookDetailView: View {
                         Button(genre.name) { Task { await addGenre(genre.slug) } }
                     }
                 } label: {
-                    Label(current.isEmpty ? "Отметить жанр" : "Жанр", systemImage: "plus")
+                    Label(current.isEmpty ? L("Отметить жанр") : L("Жанр"), systemImage: "plus")
                         .font(.subheadline)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -396,7 +396,7 @@ private struct ProgressEditor: View {
             }
             if let savedProgress {
                 ProgressView(value: savedProgress) {
-                    Text("Прочитано \(Int(savedProgress * 100))%").font(.caption).foregroundStyle(.secondary)
+                    Text(L("Прочитано %@%%", String(Int(savedProgress * 100)))).font(.caption).foregroundStyle(.secondary)
                 }
                 .tint(.accentColor)
             }

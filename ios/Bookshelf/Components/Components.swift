@@ -50,7 +50,7 @@ struct BookRowView: View {
                     ProgressView(value: progress)
                         .tint(.accentColor)
                         .frame(maxWidth: 140)
-                        .accessibilityLabel("Прочитано \(Int(progress * 100))%")
+                        .accessibilityLabel(L("Прочитано %@%%", String(Int(progress * 100))))
                 }
                 if let dates = entry.flatMap(Self.dates) {
                     Text(dates)
@@ -64,8 +64,8 @@ struct BookRowView: View {
 
     private static func dates(_ entry: ShelfEntry) -> String? {
         let parts = [
-            entry.startedAt.map { "Начал \(DateCoding.formatDay($0))" },
-            entry.finishedAt.map { "Закончил \(DateCoding.formatDay($0))" },
+            entry.startedAt.map { L("Начал %@", DateCoding.formatDay($0)) },
+            entry.finishedAt.map { L("Закончил %@", DateCoding.formatDay($0)) },
         ].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
@@ -95,7 +95,7 @@ struct RatingPicker: View {
 
 extension View {
     /// Показывает алерт, пока в message есть текст.
-    func errorAlert(_ message: Binding<String?>, title: String = "Ошибка") -> some View {
+    func errorAlert(_ message: Binding<String?>, title: LocalizedStringKey = "Ошибка") -> some View {
         alert(
             title,
             isPresented: Binding(

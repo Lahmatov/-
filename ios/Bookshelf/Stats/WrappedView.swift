@@ -19,7 +19,7 @@ struct WrappedView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 24))
                         .padding(.horizontal)
                     if let image {
-                        ShareLink(item: image, preview: SharePreview("Итоги \(String(year))", image: image)) {
+                        ShareLink(item: image, preview: SharePreview(L("Итоги %@", String(year)), image: image)) {
                             Label("Поделиться картинкой", systemImage: "square.and.arrow.up")
                                 .frame(maxWidth: .infinity, minHeight: 38)
                         }
@@ -32,7 +32,7 @@ struct WrappedView: View {
                 ProgressView().padding(.top, 80)
             }
         }
-        .navigationTitle("Итоги \(String(year))")
+        .navigationTitle(L("Итоги %@", String(year)))
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .errorAlert($errorMessage)
@@ -55,31 +55,30 @@ struct WrappedView: View {
 struct WrappedCard: View {
     let wrapped: Wrapped
 
-    private static let months = ["январь", "февраль", "март", "апрель", "май", "июнь",
-                                 "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"]
+    private static var months: [String] { DateCoding.monthNames() }
 
     private var facts: [(String, String)] {
         var result: [(String, String)] = []
-        if wrapped.pagesRead > 0 { result.append(("страниц прочитано", wrapped.pagesRead.formatted())) }
-        if let avg = wrapped.avgRating { result.append(("средняя оценка", "★ \(avg.formatted())")) }
-        if let author = wrapped.topAuthor { result.append(("любимый автор", author.value)) }
-        if let genre = wrapped.topGenre { result.append(("любимый жанр", genre.name)) }
-        if let best = wrapped.bestBook { result.append(("лучшая книга", "«\(best.book.title)» — \(best.rating)/10")) }
+        if wrapped.pagesRead > 0 { result.append((L("страниц прочитано"), wrapped.pagesRead.formatted())) }
+        if let avg = wrapped.avgRating { result.append((L("средняя оценка"), "★ \(avg.formatted())")) }
+        if let author = wrapped.topAuthor { result.append((L("любимый автор"), author.value)) }
+        if let genre = wrapped.topGenre { result.append((L("любимый жанр"), genre.name)) }
+        if let best = wrapped.bestBook { result.append((L("лучшая книга"), "«\(best.book.title)» — \(best.rating)/10")) }
         if let month = wrapped.busiestMonth, Self.months.indices.contains(month) {
-            result.append(("самый книжный месяц", Self.months[month]))
+            result.append((L("самый книжный месяц"), Self.months[month]))
         }
         return Array(result.prefix(5))
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("ИТОГИ \(String(wrapped.year))")
+            Text(L("ИТОГИ %@", String(wrapped.year)))
                 .font(.caption.bold())
                 .kerning(3)
             VStack(alignment: .leading, spacing: 0) {
                 Text("\(wrapped.booksRead)")
                     .font(.system(size: 88, weight: .black))
-                Text(Plural.ru(wrapped.booksRead, "книга прочитана", "книги прочитано", "книг прочитано"))
+                Text(Plural.localized(wrapped.booksRead, "книга прочитана", "книги прочитано", "книг прочитано"))
                     .font(.title3.bold())
             }
             Spacer(minLength: 0)
@@ -90,7 +89,7 @@ struct WrappedCard: View {
                 }
             }
             Spacer(minLength: 0)
-            Text("\(wrapped.name) · Книжная полка").font(.caption).opacity(0.7)
+            Text(L("%@ · Книжная полка", wrapped.name)).font(.caption).opacity(0.7)
         }
         .foregroundStyle(.black)
         .padding(24)

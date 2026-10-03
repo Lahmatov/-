@@ -26,9 +26,16 @@ enum DateCoding {
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
 
+    /// Названия месяцев на языке интерфейса (именительный падеж: «январь», «янв.»).
+    static func monthNames(short: Bool = false) -> [String] {
+        let formatter = DateFormatter()
+        formatter.locale = AppLanguage.locale
+        return (short ? formatter.shortStandaloneMonthSymbols : formatter.standaloneMonthSymbols) ?? []
+    }
+
     static func formatDay(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.locale = AppLanguage.locale
         formatter.timeZone = utcCalendar.timeZone
         formatter.dateStyle = .medium
         return formatter.string(from: date)

@@ -1,6 +1,7 @@
 import http2 from "node:http2";
 import { importPKCS8, SignJWT } from "jose";
 import { db } from "./db";
+import type { Lang } from "./i18n";
 
 // Push-уведомления на iPhone через APNs. Работают, когда заданы APNS_KEY_ID, APNS_TEAM_ID и APNS_KEY
 // (содержимое .p8-ключа из Apple Developer → Keys). Без них уведомления остаются только внутри приложения.
@@ -54,7 +55,7 @@ function send(host: string, path: string, headers: Record<string, string>, body:
 }
 
 /** Отправляет push на все устройства пользователя. Ошибки не роняют основной запрос. */
-export async function pushToUser(userId: string, title: string, body: string) {
+export async function pushToUser(userId: string, message: (lang: Lang) => { title: string; body: string }) {
   const c = config();
   if (!c) return;
   try {
@@ -62,8 +63,10 @@ export async function pushToUser(userId: string, title: string, body: string) {
     if (devices.length === 0) return;
     const unread = await db.notification.count({ where: { userId, read: false } });
     const jwt = await providerToken(c);
-    const payload = JSON.stringify({ aps: { alert: { title, body }, sound: "default", badge: unread } });
     for (const d of devices) {
+      const payload = JSON.stringify({
+        aps: { alert: message(d.lang === "en" ? "en" : "ru"), sound: "default", badge: unread },
+      });
       const res = await send(
         c.host,
         `/3/device/${d.token}`,

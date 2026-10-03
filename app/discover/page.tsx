@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { recommendations, topRated, trending } from "@/lib/discover";
+import { REASON_TEXT, recommendations, topRated, trending } from "@/lib/discover";
 import { GENRES } from "@/lib/genres";
 import { Plural } from "@/lib/plural";
 import { BookRow } from "@/components/BookRow";
@@ -31,7 +31,7 @@ export default async function DiscoverPage() {
           ) : (
             recs.map((r) => (
               <BookRow key={r.book.id} book={r.book}>
-                <div className="mt-1 text-xs text-neutral-500">{r.reason}</div>
+                <div className="mt-1 text-xs text-neutral-500">{REASON_TEXT[r.reason].ru}</div>
               </BookRow>
             ))
           )}

@@ -23,7 +23,7 @@ struct LikeButton: View {
         .buttonStyle(.borderless)
         .disabled(isBusy)
         .sensoryFeedback(.impact(weight: .light), trigger: state.likedByMe)
-        .accessibilityLabel(state.likedByMe ? "Убрать лайк" : "Нравится")
+        .accessibilityLabel(state.likedByMe ? L("Убрать лайк") : L("Нравится"))
         .accessibilityValue("\(state.likes)")
     }
 

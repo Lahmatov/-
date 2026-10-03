@@ -11,7 +11,7 @@ struct BarcodeScannerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var manualISBN = ""
     @State private var isLookingUp = false
-    @State private var hint = "Наведите камеру на штрихкод на обороте книги"
+    @State private var hint = L("Наведите камеру на штрихкод на обороте книги")
     @State private var notFound = false
 
     private var scannerAvailable: Bool {
@@ -73,7 +73,7 @@ struct BarcodeScannerView: View {
         guard !isLookingUp else { return }
         // Обычные товарные штрихкоды (не 978/979) отсеиваем сразу, без запроса к серверу.
         guard let isbn = ISBN.normalize(raw) else {
-            hint = "Это не ISBN книги. Ищите штрихкод, который начинается с 978 или 979."
+            hint = L("Это не ISBN книги. Ищите штрихкод, который начинается с 978 или 979.")
             return
         }
         isLookingUp = true

@@ -273,6 +273,7 @@ model Notification {
 model DeviceToken {
   token     String   @id
   userId    String
+  lang      String   @default("ru")
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

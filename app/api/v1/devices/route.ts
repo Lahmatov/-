@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiError, apiUserId, json, readJson, unauthorized } from "@/lib/api";
 import { registerDevice } from "@/lib/notifications";
+import { langOf } from "@/lib/i18n";
 
 /** Токен APNs устройства: { token } (hex). */
 export async function POST(req: Request) {
@@ -8,6 +9,6 @@ export async function POST(req: Request) {
   if (!userId) return unauthorized();
   const parsed = z.object({ token: z.string().regex(/^[0-9a-f]{32,200}$/i) }).safeParse(await readJson(req));
   if (!parsed.success) return apiError("Некорректный токен устройства");
-  await registerDevice(userId, parsed.data.token.toLowerCase());
+  await registerDevice(userId, parsed.data.token.toLowerCase(), langOf(req));
   return json({ ok: true });
 }

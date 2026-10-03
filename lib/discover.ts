@@ -1,6 +1,7 @@
 import type { Book } from "@prisma/client";
 import { db } from "./db";
 import { normalize } from "./books";
+import type { Lang } from "./i18n";
 
 // Страница автора, жанры, топы и рекомендации.
 
@@ -127,12 +128,20 @@ export async function booksInGenre(slug: string, take = 60) {
  *    которых нет на вашей полке, получают очки — тем больше, чем больше у вас общих любимых книг.
  * 2) Если таких людей нет — лучшие книги в ваших любимых жанрах, затем просто лучшие книги.
  */
+export type RecommendationReason = "similar" | "genre" | "top";
+
+export const REASON_TEXT: Record<RecommendationReason, Record<Lang, string>> = {
+  similar: { ru: "Нравится читателям с похожим вкусом", en: "Loved by readers with similar taste" },
+  genre: { ru: "Лучшее в любимом жанре", en: "Top pick in a genre you like" },
+  top: { ru: "Высоко оценено читателями", en: "Highly rated by readers" },
+};
+
 export async function recommendations(userId: string, take = 20) {
   const mine = await db.shelfEntry.findMany({ where: { userId }, select: { bookId: true, rating: true } });
   const onShelf = new Set(mine.map((e) => e.bookId));
   const liked = mine.filter((e) => (e.rating ?? 0) >= 8).map((e) => e.bookId);
 
-  const scores = new Map<string, { score: number; reason: string }>();
+  const scores = new Map<string, { score: number; reason: RecommendationReason }>();
 
   if (liked.length) {
     const peers = await db.shelfEntry.groupBy({
@@ -152,7 +161,7 @@ export async function recommendations(userId: string, take = 20) {
         const prev = scores.get(e.bookId)?.score ?? 0;
         scores.set(e.bookId, {
           score: prev + (peerWeight.get(e.userId) ?? 1) * (e.rating ?? 8),
-          reason: "Нравится читателям с похожим вкусом",
+          reason: "similar",
         });
       }
     }
@@ -169,7 +178,7 @@ export async function recommendations(userId: string, take = 20) {
     for (const g of favGenres) {
       for (const r of await topRated(take, g.genreSlug)) {
         if (!onShelf.has(r.book.id) && !scores.has(r.book.id)) {
-          scores.set(r.book.id, { score: r.score / 100, reason: "Лучшее в любимом жанре" });
+          scores.set(r.book.id, { score: r.score / 100, reason: "genre" });
         }
       }
     }
@@ -178,7 +187,7 @@ export async function recommendations(userId: string, take = 20) {
   if (scores.size < take) {
     for (const r of await topRated(take * 2)) {
       if (!onShelf.has(r.book.id) && !scores.has(r.book.id)) {
-        scores.set(r.book.id, { score: r.score / 1000, reason: "Высоко оценено читателями" });
+        scores.set(r.book.id, { score: r.score / 1000, reason: "top" });
       }
     }
   }
