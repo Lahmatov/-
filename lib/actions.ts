@@ -10,11 +10,11 @@ import { db } from "./db";
 import { upsertFromOpenLibrary } from "./openlibrary";
 import { isStatus } from "./status";
 import { parseBooksCsv, parseKindleClippings, type ImportedBook } from "./importers";
-import { firstIssue, goalSchema, listSchema, nameSchema, registerSchema } from "./validation";
+import { firstIssue, goalSchema, listSchema, nameSchema, openLibraryHitSchema, registerSchema } from "./validation";
 import { follow, unfollow, updateName } from "./social";
 import { addToList, createList, deleteList, removeFromList, updateList } from "./lists";
 import { setGoal } from "./stats";
-import { createBook, importBooks, saveShelfReview, setShelfStatus } from "./shelf";
+import { bookExists, createBook, importBooks, saveShelfReview, setShelfStatus } from "./shelf";
 
 export type FormState = { error?: string; message?: string } | undefined;
 
@@ -99,15 +99,18 @@ export async function importFromOpenLibrary(formData: FormData) {
     const v = formData.get(k);
     return typeof v === "string" && v ? v : null;
   };
-  const key = str("key");
-  const title = str("title");
-  const author = str("author");
-  if (!key || !title || !author) return;
   const year = str("year");
-  const book = await upsertFromOpenLibrary(
-    { key, title, author, year: year ? Number(year) : null, isbn: str("isbn"), coverUrl: str("coverUrl") },
-    userId,
-  );
+  // Те же правила, что и в API: ключ /works/OL…, обложка только с covers.openlibrary.org.
+  const parsed = openLibraryHitSchema.safeParse({
+    key: str("key"),
+    title: str("title"),
+    author: str("author"),
+    year: year === null ? null : Number(year),
+    isbn: str("isbn"),
+    coverUrl: str("coverUrl"),
+  });
+  if (!parsed.success) return;
+  const book = await upsertFromOpenLibrary(parsed.data, userId);
   redirect(`/books/${book.id}`);
 }
 
@@ -115,7 +118,7 @@ export async function importFromOpenLibrary(formData: FormData) {
 
 export async function setStatus(bookId: string, status: string) {
   const userId = await requireUserId();
-  if (!isStatus(status)) return;
+  if (!isStatus(status) || !(await bookExists(bookId))) return;
   await setShelfStatus(userId, bookId, status);
   revalidatePath(`/books/${bookId}`);
   revalidatePath("/");
@@ -154,6 +157,7 @@ export async function saveReview(bookId: string, _: FormState, formData: FormDat
   const userId = await requireUserId();
   const parsed = reviewSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!(await bookExists(bookId))) return { error: "Книга не найдена" };
   const result = await saveShelfReview(userId, bookId, parsed.data);
   if ("error" in result) return { error: result.error };
   revalidatePath(`/books/${bookId}`);

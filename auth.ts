@@ -5,7 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { isRateLimited, loginKey, recordFailure, resetAttempts } from "@/lib/rate-limit";
+import { clientIp, isLoginLimited, loginKeys, recordLoginFailure, recordLoginSuccess } from "@/lib/rate-limit";
 
 class TooManyAttempts extends CredentialsSignin {
   code = "too_many_attempts";
@@ -27,18 +27,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ...(googleEnabled ? [Google] : []),
     Credentials({
       credentials: { email: {}, password: {} },
-      async authorize(raw) {
+      async authorize(raw, request) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) throw new CredentialsSignin();
-        const key = loginKey(parsed.data.email);
-        if (isRateLimited(key)) throw new TooManyAttempts();
+        const keys = loginKeys(clientIp(request), parsed.data.email);
+        if (isLoginLimited(keys)) throw new TooManyAttempts();
         const user = await db.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
         const ok = !!user?.passwordHash && (await bcrypt.compare(parsed.data.password, user.passwordHash));
         if (!user || !ok) {
-          recordFailure(key);
+          recordLoginFailure(keys);
           throw new CredentialsSignin();
         }
-        resetAttempts(key);
+        recordLoginSuccess(keys);
         return { id: user.id, name: user.name, email: user.email, image: user.image };
       },
     }),

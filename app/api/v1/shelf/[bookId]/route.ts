@@ -1,15 +1,11 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { apiError, apiUserId, entryJSON, json, readJson, unauthorized } from "@/lib/api";
-import { saveShelfReview, setShelfStatus } from "@/lib/shelf";
+import { bookExists, saveShelfReview, setShelfStatus } from "@/lib/shelf";
 import { STATUSES } from "@/lib/status";
 import { firstIssue, reviewJsonSchema } from "@/lib/validation";
 
 type Ctx = { params: Promise<{ bookId: string }> };
-
-async function bookExists(bookId: string) {
-  return (await db.book.count({ where: { id: bookId } })) > 0;
-}
 
 /** Смена статуса: { "status": "READING" }. Даты начала/окончания проставляются автоматически. */
 export async function PUT(req: Request, { params }: Ctx) {

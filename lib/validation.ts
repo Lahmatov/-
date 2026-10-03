@@ -42,7 +42,12 @@ export const reviewJsonSchema = z.object({
 export const firstIssue = (e: z.ZodError) => e.issues[0]?.message ?? "Некорректные данные";
 
 export const goalSchema = z.object({
-  year: z.number().int().min(1900).max(new Date().getUTCFullYear() + 1),
+  // Верхняя граница считается при каждой проверке, а не при старте сервера (иначе «застрянет» после Нового года).
+  year: z
+    .number()
+    .int()
+    .min(1900, "Некорректный год")
+    .refine((v) => v <= new Date().getUTCFullYear() + 1, "Некорректный год"),
   // null — убрать цель
   target: z.number().int().min(1, "Цель — от 1 книги").max(1000, "Слишком большая цель").nullable(),
 });
@@ -57,4 +62,19 @@ export const listSchema = z.object({
     .nullish()
     .transform((v) => v?.trim() || null),
   isPublic: z.boolean().default(true),
+});
+
+/** Книга из результатов Open Library — и для JSON API, и для формы на сайте. */
+export const openLibraryHitSchema = z.object({
+  key: z.string().regex(/^\/works\/OL\w+$/, "Некорректный ключ Open Library"),
+  title: z.string().trim().min(1).max(300),
+  author: z.string().trim().min(1).max(300),
+  year: z.number().int().nullish().transform((v) => v ?? null),
+  isbn: z.string().max(20).nullish().transform((v) => v ?? null),
+  coverUrl: z
+    .string()
+    .url()
+    .refine((u) => u.startsWith("https://covers.openlibrary.org/"), "Обложка не из Open Library")
+    .nullish()
+    .transform((v) => v ?? null),
 });

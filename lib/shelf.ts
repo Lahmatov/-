@@ -15,6 +15,10 @@ export async function createBook(userId: string, input: { title: string; author:
   return { book, existing: false };
 }
 
+export async function bookExists(bookId: string) {
+  return (await db.book.count({ where: { id: bookId } })) > 0;
+}
+
 export async function setShelfStatus(userId: string, bookId: string, status: Status) {
   const now = new Date();
   const prev = await db.shelfEntry.findUnique({ where: { userId_bookId: { userId, bookId } } });
