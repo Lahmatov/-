@@ -48,7 +48,7 @@ final class ModelsTests: XCTestCase {
     func testActionsForEachStatus() {
         XCTAssertEqual(ReadingStatus.actions(for: nil).first?.target, .reading)
         XCTAssertEqual(ReadingStatus.actions(for: .reading).map(\.target), [.read, .paused, .dropped])
-        XCTAssertEqual(ReadingStatus.actions(for: .read).map(\.title), ["Перечитать"])
+        XCTAssertEqual(ReadingStatus.actions(for: .read).map(\.title), [L("Перечитать")])
         for status in ReadingStatus.allCases {
             XCTAssertFalse(ReadingStatus.actions(for: status).contains { $0.target == status })
         }
@@ -88,7 +88,7 @@ final class ModelsTests: XCTestCase {
           {"id":"a2","type":"STATUS","status":"READ","rating":null,"review":null,"createdAt":"2026-10-03T11:00:00.000Z",
            "user":{"id":"u1","name":"Аня"},"book":{"id":"b1","title":"Дюна","author":"Фрэнк Герберт","year":1965,"isbn":null,"coverUrl":null}}]}
         """)
-        XCTAssertEqual(feed.items.map(\.label), ["отзыв", "прочитано"])
+        XCTAssertEqual(feed.items.map(\.label), [L("отзыв"), L("прочитано")])
 
         let profile = try decode(UserProfile.self, """
         {"user":{"id":"u1","name":"Аня"},"isMe":false,"isFollowing":true,"counts":{"followers":1,"following":0,"read":1},
