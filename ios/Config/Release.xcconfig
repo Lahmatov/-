@@ -1,0 +1,5 @@
+#include "Shared.xcconfig"
+
+API_BASE_URL = https:/$()/bookshelf.example.com
+
+#include? "Local.xcconfig"

@@ -7,10 +7,11 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { auth, signIn, signOut } from "@/auth";
 import { db } from "./db";
-import { findDuplicate, makeSearchText } from "./books";
 import { upsertFromOpenLibrary } from "./openlibrary";
 import { isStatus } from "./status";
 import { parseBooksCsv, parseKindleClippings, type ImportedBook } from "./importers";
+import { registerSchema } from "./validation";
+import { createBook, importBooks, saveShelfReview, setShelfStatus } from "./shelf";
 
 export type FormState = { error?: string; message?: string } | undefined;
 
@@ -21,12 +22,6 @@ async function requireUserId(): Promise<string> {
 }
 
 // ---------- Авторизация ----------
-
-const registerSchema = z.object({
-  name: z.string().trim().min(1, "Укажите имя").max(80),
-  email: z.string().trim().toLowerCase().email("Некорректный email"),
-  password: z.string().min(8, "Пароль — минимум 8 символов").max(200),
-});
 
 export async function register(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = registerSchema.safeParse(Object.fromEntries(formData));
@@ -88,13 +83,8 @@ export async function addBook(_: FormState, formData: FormData): Promise<FormSta
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { title, author, year } = parsed.data;
 
-  const duplicate = await findDuplicate(title, author);
-  if (duplicate) redirect(`/books/${duplicate.id}?existing=1`);
-
-  const book = await db.book.create({
-    data: { title, author, year, searchText: makeSearchText(title, author), addedById: userId },
-  });
-  redirect(`/books/${book.id}`);
+  const { book, existing } = await createBook(userId, { title, author, year });
+  redirect(existing ? `/books/${book.id}?existing=1` : `/books/${book.id}`);
 }
 
 export async function importFromOpenLibrary(formData: FormData) {
@@ -120,26 +110,7 @@ export async function importFromOpenLibrary(formData: FormData) {
 export async function setStatus(bookId: string, status: string) {
   const userId = await requireUserId();
   if (!isStatus(status)) return;
-  const now = new Date();
-  const prev = await db.shelfEntry.findUnique({ where: { userId_bookId: { userId, bookId } } });
-
-  const data: { status: string; startedAt?: Date | null; finishedAt?: Date | null } = { status };
-  if (status === "READING") {
-    // Начал заново после прочтения/брошенной книги — новый круг.
-    if (!prev?.startedAt || prev.status === "READ" || prev.status === "DROPPED") data.startedAt = now;
-    data.finishedAt = null;
-  } else if (status === "READ") {
-    data.finishedAt = now;
-  } else if (status === "WANT") {
-    data.startedAt = null;
-    data.finishedAt = null;
-  }
-
-  await db.shelfEntry.upsert({
-    where: { userId_bookId: { userId, bookId } },
-    create: { userId, bookId, ...data },
-    update: data,
-  });
+  await setShelfStatus(userId, bookId, status);
   revalidatePath(`/books/${bookId}`);
   revalidatePath("/");
 }
@@ -177,22 +148,13 @@ export async function saveReview(bookId: string, _: FormState, formData: FormDat
   const userId = await requireUserId();
   const parsed = reviewSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const data = parsed.data;
-  if (data.startedAt && data.finishedAt && data.startedAt > data.finishedAt) {
-    return { error: "Дата окончания раньше даты начала" };
-  }
-
-  await db.shelfEntry.upsert({
-    where: { userId_bookId: { userId, bookId } },
-    create: { userId, bookId, status: "READ", ...data },
-    update: data,
-  });
+  const result = await saveShelfReview(userId, bookId, parsed.data);
+  if ("error" in result) return { error: result.error };
   revalidatePath(`/books/${bookId}`);
   return { message: "Сохранено" };
 }
 
 // ---------- Импорт ----------
-
 
 export async function importFile(_: FormState, formData: FormData): Promise<FormState> {
   const userId = await requireUserId();
@@ -210,33 +172,7 @@ export async function importFile(_: FormState, formData: FormData): Promise<Form
   }
   if (items.length === 0) return { error: "В файле не найдено ни одной книги" };
 
-  let added = 0;
-  for (const item of items.slice(0, 5000)) {
-    const book =
-      (await findDuplicate(item.title, item.author)) ??
-      (await db.book.create({
-        data: {
-          title: item.title,
-          author: item.author,
-          year: item.year ?? null,
-          searchText: makeSearchText(item.title, item.author),
-          addedById: userId,
-        },
-      }));
-    const exists = await db.shelfEntry.findUnique({ where: { userId_bookId: { userId, bookId: book.id } } });
-    if (exists) continue; // не перезаписываем то, что пользователь уже отметил
-    await db.shelfEntry.create({
-      data: {
-        userId,
-        bookId: book.id,
-        status: item.status,
-        rating: item.rating ?? null,
-        review: item.review ?? null,
-        finishedAt: item.finishedAt ?? null,
-      },
-    });
-    added++;
-  }
+  const { found, added } = await importBooks(userId, items);
   revalidatePath("/");
-  return { message: `Найдено книг: ${items.length}, добавлено на полку: ${added}` };
+  return { message: `Найдено книг: ${found}, добавлено на полку: ${added}` };
 }

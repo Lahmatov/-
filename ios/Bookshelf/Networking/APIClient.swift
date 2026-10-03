@@ -1,0 +1,191 @@
+import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
+enum APIError: LocalizedError, Equatable {
+    case unauthorized
+    case server(String)
+    case invalidResponse
+
+    var errorDescription: String? {
+        switch self {
+        case .unauthorized: "Сессия истекла — войдите снова."
+        case .server(let message): message
+        case .invalidResponse: "Сервер вернул непонятный ответ."
+        }
+    }
+}
+
+/// Клиент JSON API веб-приложения (/api/v1). Токен передаётся в заголовке Authorization.
+@MainActor
+final class APIClient {
+    let baseURL: URL
+    var token: String?
+    /// Вызывается, когда сервер ответил 401 на запрос с токеном (токен отозван или аккаунт удалён).
+    var onUnauthorized: (() -> Void)?
+
+    private let session: URLSession
+    private let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { try DateCoding.decode($0) }
+        return decoder
+    }()
+    private let encoder = JSONEncoder()
+
+    private struct ErrorBody: Decodable { let error: String }
+
+    init(baseURL: URL, session: URLSession = .shared) {
+        self.baseURL = baseURL
+        self.session = session
+    }
+
+    // MARK: - Авторизация
+
+    struct AuthResponse: Decodable { let token: String; let user: User }
+    private struct MeResponse: Decodable { let user: User }
+    private struct OK: Decodable {}
+
+    func register(name: String, email: String, password: String) async throws -> AuthResponse {
+        try await send("POST", "auth/register", json: ["name": name, "email": email, "password": password])
+    }
+
+    func login(email: String, password: String) async throws -> AuthResponse {
+        try await send("POST", "auth/login", json: ["email": email, "password": password])
+    }
+
+    func signInWithGoogle(idToken: String) async throws -> AuthResponse {
+        try await send("POST", "auth/google", json: ["idToken": idToken])
+    }
+
+    func signInWithApple(identityToken: String, name: String?) async throws -> AuthResponse {
+        struct Body: Encodable { let identityToken: String; let name: String? }
+        return try await send("POST", "auth/apple", json: Body(identityToken: identityToken, name: name))
+    }
+
+    func logout() async throws {
+        let _: OK = try await send("POST", "auth/logout")
+    }
+
+    func me() async throws -> User {
+        let response: MeResponse = try await send("GET", "me")
+        return response.user
+    }
+
+    func deleteAccount() async throws {
+        let _: OK = try await send("DELETE", "me")
+    }
+
+    // MARK: - Каталог
+
+    private struct BookResponse: Decodable { let book: Book }
+    struct AddBookResponse: Decodable { let book: Book; let existing: Bool }
+
+    func search(_ query: String) async throws -> SearchResults {
+        try await send("GET", "search", query: [URLQueryItem(name: "q", value: query)])
+    }
+
+    func book(id: String) async throws -> BookDetails {
+        try await send("GET", "books/\(id)")
+    }
+
+    func addBook(title: String, author: String, year: Int?) async throws -> AddBookResponse {
+        struct Body: Encodable { let title: String; let author: String; let year: Int? }
+        return try await send("POST", "books", json: Body(title: title, author: author, year: year))
+    }
+
+    func addFromOpenLibrary(_ hit: OpenLibraryHit) async throws -> Book {
+        let response: BookResponse = try await send("POST", "books/openlibrary", json: hit)
+        return response.book
+    }
+
+    // MARK: - Полка
+
+    private struct EntryResponse: Decodable { let entry: ShelfEntry }
+
+    func shelf(status: ReadingStatus? = nil) async throws -> Shelf {
+        try await send("GET", "shelf", query: status.map { [URLQueryItem(name: "status", value: $0.rawValue)] } ?? [])
+    }
+
+    func setStatus(_ status: ReadingStatus, bookId: String) async throws -> ShelfEntry {
+        let response: EntryResponse = try await send("PUT", "shelf/\(bookId)", json: ["status": status.rawValue])
+        return response.entry
+    }
+
+    func saveReview(_ update: ReviewUpdate, bookId: String) async throws -> ShelfEntry {
+        let response: EntryResponse = try await send("PATCH", "shelf/\(bookId)", json: update)
+        return response.entry
+    }
+
+    func removeFromShelf(bookId: String) async throws {
+        let _: OK = try await send("DELETE", "shelf/\(bookId)")
+    }
+
+    // MARK: - Импорт
+
+    func importFile(_ data: Data, filename: String, kind: ImportKind) async throws -> ImportResult {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+        func append(_ string: String) { body.append(Data(string.utf8)) }
+        append("--\(boundary)\r\nContent-Disposition: form-data; name=\"kind\"\r\n\r\n\(kind.rawValue)\r\n")
+        append("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n")
+        append("Content-Type: application/octet-stream\r\n\r\n")
+        body.append(data)
+        append("\r\n--\(boundary)--\r\n")
+
+        var request = makeRequest("POST", "import")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        return try await perform(request)
+    }
+
+    // MARK: - Транспорт
+
+    private func makeRequest(_ method: String, _ path: String, query: [URLQueryItem] = []) -> URLRequest {
+        var components = URLComponents(
+            url: baseURL.appendingPathComponent("api/v1").appendingPathComponent(path),
+            resolvingAgainstBaseURL: false
+        )!
+        if !query.isEmpty { components.queryItems = query }
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = method
+        request.timeoutInterval = 20
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        return request
+    }
+
+    private func send<T: Decodable>(
+        _ method: String,
+        _ path: String,
+        query: [URLQueryItem] = [],
+        json body: (any Encodable)? = nil
+    ) async throws -> T {
+        var request = makeRequest(method, path, query: query)
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try encoder.encode(body)
+        }
+        return try await perform(request)
+    }
+
+    private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        if (200..<300).contains(http.statusCode) {
+            do {
+                return try decoder.decode(T.self, from: data)
+            } catch {
+                throw APIError.invalidResponse
+            }
+        }
+
+        let message = (try? decoder.decode(ErrorBody.self, from: data))?.error
+        if http.statusCode == 401, request.value(forHTTPHeaderField: "Authorization") != nil {
+            onUnauthorized?()
+            throw APIError.unauthorized
+        }
+        throw APIError.server(message ?? "Ошибка сервера (\(http.statusCode))")
+    }
+}

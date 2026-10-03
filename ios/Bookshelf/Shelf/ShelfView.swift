@@ -1,0 +1,84 @@
+import SwiftUI
+
+struct ShelfView: View {
+    @Environment(AuthStore.self) private var auth
+    @State private var selected: ReadingStatus = .reading
+    @State private var shelf: Shelf?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    statusChips
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
+                Section {
+                    if let shelf {
+                        let items = shelf.items.filter { $0.entry.status == selected }
+                        if items.isEmpty {
+                            ContentUnavailableView(
+                                "Здесь пусто",
+                                systemImage: selected.systemImage,
+                                description: Text("Найдите книгу во вкладке «Поиск»")
+                            )
+                            .listRowBackground(Color.clear)
+                        } else {
+                            ForEach(items) { item in
+                                NavigationLink(value: BookRoute(id: item.book.id)) {
+                                    BookRowView(book: item.book, entry: item.entry)
+                                }
+                            }
+                        }
+                    } else if errorMessage == nil {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .listRowBackground(Color.clear)
+                    }
+                }
+            }
+            .navigationTitle("Мои книги")
+            .navigationDestination(for: BookRoute.self) { BookDetailView(bookId: $0.id) }
+            // Перезагружаем при каждом появлении — например, после смены статуса на карточке книги.
+            .task { await load() }
+            .refreshable { await load() }
+            .errorAlert($errorMessage)
+        }
+    }
+
+    private var statusChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ReadingStatus.allCases) { status in
+                    let isSelected = status == selected
+                    Button {
+                        selected = status
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(status.title)
+                            Text("\(shelf?.count(status) ?? 0)")
+                                .opacity(0.6)
+                        }
+                        .font(.subheadline)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.15), in: Capsule())
+                        .foregroundStyle(isSelected ? Color.black : Color.primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func load() async {
+        do {
+            shelf = try await auth.api.shelf()
+        } catch {
+            if !Task.isCancelled { errorMessage = error.localizedDescription }
+        }
+    }
+}

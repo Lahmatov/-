@@ -22,6 +22,7 @@ model User {
 
   accounts   Account[]
   sessions   Session[]
+  apiTokens  ApiToken[]
   entries    ShelfEntry[]
   booksAdded Book[]       @relation("BookAddedBy")
 }
@@ -49,6 +50,18 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Токены для мобильного приложения (Authorization: Bearer ...). В базе хранится только SHA-256.
+model ApiToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  name       String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {

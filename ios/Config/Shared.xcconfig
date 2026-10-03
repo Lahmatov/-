@@ -1,0 +1,10 @@
+// Общие настройки. Личные значения (Team ID, свой Bundle ID, Google Client ID)
+// удобно положить в Config/Local.xcconfig — он не попадает в git.
+
+APP_BUNDLE_ID = com.example.bookshelf
+DEVELOPMENT_TEAM =
+
+// Google Sign-In: Client ID типа iOS из Google Cloud Console и его «перевёрнутая» форма
+// (com.googleusercontent.apps.XXXX). Пустой GOOGLE_CLIENT_ID — кнопка Google скрыта.
+GOOGLE_CLIENT_ID =
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.placeholder

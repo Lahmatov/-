@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
+import { getBookDetails } from "@/lib/shelf";
 import { STATUS_LABEL, isStatus, type Status } from "@/lib/status";
 import { removeFromShelf, setStatus } from "@/lib/actions";
 import { BookCover } from "@/components/BookCover";
@@ -48,20 +48,9 @@ export default async function BookPage({
   const session = await auth();
   const userId = session?.user?.id;
 
-  const book = await db.book.findUnique({ where: { id } });
-  if (!book) notFound();
-
-  const [mine, stats, reviews] = await Promise.all([
-    userId ? db.shelfEntry.findUnique({ where: { userId_bookId: { userId, bookId: id } } }) : null,
-    db.shelfEntry.aggregate({ where: { bookId: id, rating: { not: null } }, _avg: { rating: true }, _count: { rating: true } }),
-    db.shelfEntry.findMany({
-      where: { bookId: id, isPublic: true, review: { not: null }, ...(userId ? { userId: { not: userId } } : {}) },
-      include: { user: { select: { name: true, image: true } } },
-      orderBy: { updatedAt: "desc" },
-      take: 50,
-    }),
-  ]);
-  const readers = await db.shelfEntry.count({ where: { bookId: id, status: "READ" } });
+  const details = await getBookDetails(id, userId ?? null);
+  if (!details) notFound();
+  const { book, mine, stats, reviews } = details;
   const myStatus = mine && isStatus(mine.status) ? mine.status : null;
 
   return (
@@ -81,12 +70,12 @@ export default async function BookPage({
           <div className="flex gap-6 text-sm">
             <div>
               <div className="text-2xl font-bold text-amber-400">
-                {stats._avg.rating ? `★ ${stats._avg.rating.toFixed(1)}` : "—"}
+                {stats.avgRating ? `★ ${stats.avgRating.toFixed(1)}` : "—"}
               </div>
-              <div className="text-neutral-500">{stats._count.rating} оценок</div>
+              <div className="text-neutral-500">{stats.ratingsCount} оценок</div>
             </div>
             <div>
-              <div className="text-2xl font-bold">{readers}</div>
+              <div className="text-2xl font-bold">{stats.readersCount}</div>
               <div className="text-neutral-500">прочитали</div>
             </div>
           </div>

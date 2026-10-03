@@ -41,6 +41,32 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
 SQLite годится для разработки. Для сервера поменяйте в `prisma/schema.prisma` `provider = "postgresql"` и задайте
 `DATABASE_URL` (Neon, Supabase, Railway и т. п.). Удобнее всего деплоить на Vercel.
 
+## iOS-приложение
+
+Нативное приложение на SwiftUI лежит в [`ios/`](ios/README.md) и работает с этим же сервером.
+
+## JSON API (`/api/v1`)
+
+Авторизация — заголовок `Authorization: Bearer <token>`. Токен выдают эндпоинты входа.
+
+| Метод | Путь | Что делает |
+| --- | --- | --- |
+| POST | `/auth/register` | `{name, email, password}` → `{token, user}` |
+| POST | `/auth/login` | `{email, password}` → `{token, user}` |
+| POST | `/auth/apple` | `{identityToken, name?}` → `{token, user}` |
+| POST | `/auth/google` | `{idToken}` → `{token, user}` |
+| POST | `/auth/logout` | отзывает текущий токен |
+| GET / DELETE | `/me` | профиль / удаление аккаунта со всеми данными |
+| GET | `/search?q=` | `{local: Book[], openLibrary: Hit[]}` |
+| POST | `/books` | ручное добавление `{title, author, year?}` → `{book, existing}` |
+| POST | `/books/openlibrary` | сохранить результат Open Library в каталог |
+| GET | `/books/:id` | `{book, myEntry, stats, reviews}` |
+| GET | `/shelf?status=` | `{counts, items: [{book, entry}]}` |
+| PUT | `/shelf/:bookId` | `{status}` — даты начала/окончания ставятся сами |
+| PATCH | `/shelf/:bookId` | `{rating?, review?, isPublic, startedAt?, finishedAt?}` |
+| DELETE | `/shelf/:bookId` | убрать с полки |
+| POST | `/import` | multipart: `file` + `kind` (`kindle` \| `csv`) |
+
 ## Стек
 
 Next.js 15 (App Router, server actions) · Prisma · Auth.js v5 · Tailwind CSS 4 · Open Library API.
@@ -49,7 +75,6 @@ Next.js 15 (App Router, server actions) · Prisma · Auth.js v5 · Tailwind CSS 
 
 - Профили и лента друзей: подписки, «что читают те, на кого я подписан».
 - Свои полки/списки, цели на год («50 книг в 2027»), статистика.
-- iOS-приложение (React Native/Expo поверх этого же бэкенда) или PWA на домашний экран.
 - Kindle: сейчас только через файл с устройства — у Amazon нет публичного API библиотеки.
 - Apple Books: публичного API и экспорта нет, поэтому прямой синхронизации не будет; остаётся импорт через CSV.
-- Подтверждение email и сброс пароля.
+- Подтверждение email и сброс пароля, ограничение частоты попыток входа.
