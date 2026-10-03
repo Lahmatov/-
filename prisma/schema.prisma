@@ -87,6 +87,7 @@ model Book {
   isbn           String?
   coverUrl       String?
   openLibraryKey String?  @unique
+  pageCount      Int?
   // Нижний регистр "название автор" — для поиска (в т.ч. по кириллице) и дедупликации.
   searchText     String
   createdAt      DateTime @default(now())
@@ -96,6 +97,7 @@ model Book {
   entries    ShelfEntry[]
   activities Activity[]
   listItems  BookListItem[]
+  genres     BookGenre[]
 
   @@index([searchText])
   @@index([isbn])
@@ -112,6 +114,8 @@ model ShelfEntry {
   startedAt  DateTime?
   finishedAt DateTime?
   rating     Int? // 1..10
+  currentPage Int? // прогресс чтения
+  totalPages  Int? // страниц в издании читателя, если отличается от книги
   review     String?
   isPublic   Boolean   @default(true)
   createdAt  DateTime  @default(now())
@@ -192,4 +196,25 @@ model BookListItem {
   book Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@id([listId, bookId])
+}
+
+// ---------- Жанры ----------
+
+// Справочник жанров (см. lib/genres.ts). Книге жанры ставятся из тем Open Library или читателями.
+model Genre {
+  slug  String      @id
+  name  String
+  books BookGenre[]
+}
+
+model BookGenre {
+  bookId    String
+  genreSlug String
+  addedById String?
+
+  book  Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreSlug], references: [slug], onDelete: Cascade)
+
+  @@id([bookId, genreSlug])
+  @@index([genreSlug])
 }

@@ -32,12 +32,23 @@ struct ListRoute: Hashable {
     let id: String
 }
 
+struct AuthorRoute: Hashable {
+    let name: String
+}
+
+struct GenreRoute: Hashable {
+    let slug: String
+    let name: String
+}
+
 extension View {
     /// Переходы, общие для всех вкладок: книга, профиль человека, список.
     func appDestinations() -> some View {
         navigationDestination(for: BookRoute.self) { BookDetailView(bookId: $0.id) }
             .navigationDestination(for: UserRoute.self) { UserProfileView(userId: $0.id) }
             .navigationDestination(for: ListRoute.self) { ListDetailView(listId: $0.id) }
+            .navigationDestination(for: AuthorRoute.self) { AuthorView(name: $0.name) }
+            .navigationDestination(for: GenreRoute.self) { GenreView(slug: $0.slug, name: $0.name) }
     }
 }
 

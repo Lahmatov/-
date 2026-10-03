@@ -68,6 +68,7 @@ export const bookJSON = (b: Book) => ({
   year: b.year,
   isbn: b.isbn,
   coverUrl: b.coverUrl,
+  pageCount: b.pageCount,
 });
 
 export const entryJSON = (e: ShelfEntry) => ({
@@ -77,6 +78,8 @@ export const entryJSON = (e: ShelfEntry) => ({
   rating: e.rating,
   review: e.review,
   isPublic: e.isPublic,
+  currentPage: e.currentPage,
+  totalPages: e.totalPages,
   updatedAt: e.updatedAt,
 });
 

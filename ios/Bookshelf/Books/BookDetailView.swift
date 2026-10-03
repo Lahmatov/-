@@ -36,12 +36,20 @@ struct BookDetailView: View {
         List {
             Section { header(details) }
 
+            Section("Жанры") {
+                genreChips(details)
+            }
+
             Section("Моя полка") {
                 if let status = details.myEntry?.status {
                     Label(status.title, systemImage: status.systemImage)
                         .foregroundStyle(.tint)
                 }
                 statusButtons(current: details.myEntry?.status)
+                if let entry = details.myEntry, entry.status == .reading || entry.status == .paused {
+                    ProgressEditor(bookId: details.book.id, entry: entry, pageCount: details.book.pageCount) { await load() }
+                        .id("progress-\(entry.status.rawValue)")
+                }
             }
 
             if let entry = details.myEntry {
@@ -92,10 +100,16 @@ struct BookDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(details.book.title)
                     .font(.title2.bold())
-                Text(details.book.author)
-                    .foregroundStyle(.secondary)
-                if let year = details.book.year {
-                    Text(String(year))
+                // Каждый соавтор — ссылка на свою страницу.
+                ForEach(details.book.authors, id: \.self) { name in
+                    NavigationLink(value: AuthorRoute(name: name)) {
+                        Text(name).foregroundStyle(.tint)
+                    }
+                    .buttonStyle(.borderless)
+                }
+                let meta = [details.book.year.map(String.init), details.book.pageCount.map { "\($0) стр." }].compactMap { $0 }
+                if !meta.isEmpty {
+                    Text(meta.joined(separator: " · "))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -120,6 +134,47 @@ struct BookDetailView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    @State private var allGenres: [Genre] = []
+
+    private func genreChips(_ details: BookDetails) -> some View {
+        let current = details.genres ?? []
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(current) { genre in
+                    NavigationLink(value: GenreRoute(slug: genre.slug, name: genre.name)) {
+                        Text(genre.name)
+                            .font(.subheadline)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.secondary.opacity(0.15), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                Menu {
+                    ForEach(allGenres.filter { g in !current.contains { $0.slug == g.slug } }) { genre in
+                        Button(genre.name) { Task { await addGenre(genre.slug) } }
+                    }
+                } label: {
+                    Label(current.isEmpty ? "Отметить жанр" : "Жанр", systemImage: "plus")
+                        .font(.subheadline)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .overlay(Capsule().stroke(Color.secondary.opacity(0.4)))
+                }
+                .task { if allGenres.isEmpty { allGenres = (try? await auth.api.genres()) ?? [] } }
+            }
+        }
+    }
+
+    private func addGenre(_ slug: String) async {
+        do {
+            _ = try await auth.api.addGenre(slug, bookId: bookId)
+            await load()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func statusButtons(current: ReadingStatus?) -> some View {
@@ -275,6 +330,76 @@ private struct ReviewEditor: View {
         do {
             _ = try await auth.api.saveReview(update, bookId: bookId)
             savedCount += 1
+            await onSaved()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+/// «Страница 120 из 350» и полоска прогресса.
+private struct ProgressEditor: View {
+    let bookId: String
+    let pageCount: Int?
+    let onSaved: () async -> Void
+
+    @Environment(AuthStore.self) private var auth
+    @State private var current: String
+    @State private var total: String
+    @State private var savedProgress: Double?
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    init(bookId: String, entry: ShelfEntry, pageCount: Int?, onSaved: @escaping () async -> Void) {
+        self.bookId = bookId
+        self.pageCount = pageCount
+        self.onSaved = onSaved
+        _current = State(initialValue: entry.currentPage.map(String.init) ?? "")
+        _total = State(initialValue: (entry.totalPages ?? pageCount).map(String.init) ?? "")
+        _savedProgress = State(initialValue: entry.progress(pageCount: pageCount))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Страница")
+                TextField("0", text: $current)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 70)
+                Text("из")
+                TextField("?", text: $total)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 70)
+                Spacer()
+                Button {
+                    Task { await save() }
+                } label: {
+                    if isSaving { ProgressView() } else { Text("Сохранить") }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isSaving)
+            }
+            if let savedProgress {
+                ProgressView(value: savedProgress) {
+                    Text("Прочитано \(Int(savedProgress * 100))%").font(.caption).foregroundStyle(.secondary)
+                }
+                .tint(.accentColor)
+            }
+        }
+        .padding(.vertical, 4)
+        .errorAlert($errorMessage)
+    }
+
+    private func save() async {
+        let page = Int(current.trimmingCharacters(in: .whitespaces))
+        let pages = Int(total.trimmingCharacters(in: .whitespaces))
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            let entry = try await auth.api.setProgress(currentPage: page, totalPages: pages, bookId: bookId)
+            savedProgress = entry.progress(pageCount: pageCount)
             await onSaved()
         } catch {
             errorMessage = error.localizedDescription

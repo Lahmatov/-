@@ -75,9 +75,15 @@ struct Book: Codable, Identifiable, Hashable, Sendable {
     let year: Int?
     let isbn: String?
     let coverUrl: URL?
+    let pageCount: Int?
 
     var subtitle: String {
         [author, year.map(String.init)].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// «Илья Ильф, Евгений Петров» → два автора (как lib/discover.ts на сервере).
+    var authors: [String] {
+        author.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 }
 
@@ -88,7 +94,15 @@ struct ShelfEntry: Codable, Hashable, Sendable {
     let rating: Int?
     let review: String?
     let isPublic: Bool
+    let currentPage: Int?
+    let totalPages: Int?
     let updatedAt: Date
+
+    /// Доля прочитанного 0...1, если известно число страниц.
+    func progress(pageCount: Int?) -> Double? {
+        guard let current = currentPage, let total = totalPages ?? pageCount, total > 0 else { return nil }
+        return min(1, Double(current) / Double(total))
+    }
 }
 
 struct BookStats: Codable, Hashable, Sendable {
@@ -111,6 +125,7 @@ struct BookDetails: Codable, Sendable {
     let myEntry: ShelfEntry?
     let stats: BookStats
     let reviews: [Review]
+    let genres: [GenreRef]?
 }
 
 struct OpenLibraryHit: Codable, Identifiable, Hashable, Sendable {
@@ -120,6 +135,8 @@ struct OpenLibraryHit: Codable, Identifiable, Hashable, Sendable {
     let year: Int?
     let isbn: String?
     let coverUrl: URL?
+    let pageCount: Int?
+    let subjects: [String]?
 
     var id: String { key }
     var subtitle: String {
@@ -135,6 +152,7 @@ struct SearchResults: Codable, Sendable {
 struct ShelfItem: Codable, Identifiable, Hashable, Sendable {
     let book: Book
     let entry: ShelfEntry
+    let genres: [String]?
     var id: String { book.id }
 }
 
@@ -277,4 +295,57 @@ struct ListInput: Encodable, Sendable {
     var title: String
     var description: String?
     var isPublic: Bool
+}
+
+// MARK: - Обзор: авторы, жанры, топы, рекомендации
+
+struct GenreRef: Codable, Identifiable, Hashable, Sendable {
+    let slug: String
+    let name: String
+    var id: String { slug }
+}
+
+struct Genre: Codable, Identifiable, Hashable, Sendable {
+    let slug: String
+    let name: String
+    let count: Int
+    var id: String { slug }
+}
+
+struct GenreBooks: Codable, Sendable {
+    let slug: String
+    let name: String
+    let books: [Book]
+}
+
+struct RatedBook: Codable, Identifiable, Hashable, Sendable {
+    let book: Book
+    let avgRating: Double?
+    let ratingsCount: Int
+    var id: String { book.id }
+}
+
+struct AuthorDetails: Codable, Sendable {
+    let name: String
+    let avgRating: Double?
+    let ratingsCount: Int
+    let readersCount: Int
+    let books: [RatedBook]
+}
+
+struct TrendingBook: Codable, Identifiable, Hashable, Sendable {
+    let book: Book
+    let count: Int
+    var id: String { book.id }
+}
+
+struct TopBooks: Codable, Sendable {
+    let top: [RatedBook]
+    let trending: [TrendingBook]
+}
+
+struct Recommendation: Codable, Identifiable, Hashable, Sendable {
+    let book: Book
+    let reason: String
+    var id: String { book.id }
 }

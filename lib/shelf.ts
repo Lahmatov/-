@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { recordActivity } from "./social";
+import { bookGenres } from "./genres";
 import { findDuplicate, makeSearchText } from "./books";
 import type { ImportedBook } from "./importers";
 import type { Status } from "./status";
@@ -106,7 +107,7 @@ export async function importBooks(userId: string, items: ImportedBook[]) {
 export async function getBookDetails(bookId: string, userId: string | null) {
   const book = await db.book.findUnique({ where: { id: bookId } });
   if (!book) return null;
-  const [mine, stats, readers, reviews] = await Promise.all([
+  const [mine, stats, readers, reviews, genres] = await Promise.all([
     userId ? db.shelfEntry.findUnique({ where: { userId_bookId: { userId, bookId } } }) : null,
     db.shelfEntry.aggregate({
       where: { bookId, rating: { not: null } },
@@ -120,11 +121,40 @@ export async function getBookDetails(bookId: string, userId: string | null) {
       orderBy: { updatedAt: "desc" },
       take: 50,
     }),
+    bookGenres(bookId),
   ]);
   return {
     book,
     mine,
     stats: { avgRating: stats._avg.rating, ratingsCount: stats._count.rating, readersCount: readers },
     reviews,
+    genres,
   };
+}
+
+/** Прогресс чтения. Книга без записи на полке попадает в «Читаю». */
+export async function setProgress(userId: string, bookId: string, currentPage: number | null, totalPages?: number | null) {
+  const book = await db.book.findUnique({ where: { id: bookId }, select: { pageCount: true } });
+  if (!book) return { error: "Книга не найдена" } as const;
+  const existing = await db.shelfEntry.findUnique({ where: { userId_bookId: { userId, bookId } } });
+  const total = totalPages ?? null;
+  const limit = total ?? existing?.totalPages ?? book.pageCount;
+  if (currentPage !== null && limit && currentPage > limit) {
+    return { error: `В книге ${limit} стр.` } as const;
+  }
+  // Первое указание числа страниц сохраняем и в книгу — пригодится остальным читателям.
+  if (total && !book.pageCount) await db.book.update({ where: { id: bookId }, data: { pageCount: total } });
+
+  const data = { currentPage, ...(totalPages !== undefined ? { totalPages: total } : {}) };
+  const entry = existing
+    ? await db.shelfEntry.update({ where: { id: existing.id }, data })
+    : await setShelfStatus(userId, bookId, "READING").then((e) => db.shelfEntry.update({ where: { id: e.id }, data }));
+  return { entry } as const;
+}
+
+/** Доля прочитанного 0..1 или null, если неизвестно число страниц. */
+export function progressOf(entry: { currentPage: number | null; totalPages: number | null }, book: { pageCount: number | null }) {
+  const total = entry.totalPages ?? book.pageCount;
+  if (!total || entry.currentPage === null) return null;
+  return Math.min(1, entry.currentPage / total);
 }

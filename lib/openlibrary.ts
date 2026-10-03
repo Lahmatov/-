@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { makeSearchText } from "./books";
+import { addGenres, genresFromSubjects } from "./genres";
 
 export type OpenLibraryHit = {
   key: string;
@@ -8,6 +9,8 @@ export type OpenLibraryHit = {
   year: number | null;
   isbn: string | null;
   coverUrl: string | null;
+  pageCount?: number | null;
+  subjects?: string[] | null;
 };
 
 type OLDoc = {
@@ -17,9 +20,11 @@ type OLDoc = {
   first_publish_year?: number;
   cover_i?: number;
   isbn?: string[];
+  number_of_pages_median?: number;
+  subject?: string[];
 };
 
-const FIELDS = "key,title,author_name,first_publish_year,cover_i,isbn";
+const FIELDS = "key,title,author_name,first_publish_year,cover_i,isbn,number_of_pages_median,subject";
 
 function toHit(doc: OLDoc): OpenLibraryHit | null {
   if (!doc.title || !doc.author_name?.length) return null;
@@ -30,6 +35,8 @@ function toHit(doc: OLDoc): OpenLibraryHit | null {
     year: doc.first_publish_year ?? null,
     isbn: doc.isbn?.[0] ?? null,
     coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null,
+    pageCount: doc.number_of_pages_median ?? null,
+    subjects: doc.subject?.slice(0, 20) ?? null,
   };
 }
 
@@ -63,8 +70,15 @@ export async function upsertFromOpenLibrary(hit: OpenLibraryHit, addedById?: str
   const existing = await db.book.findFirst({
     where: { OR: [{ openLibraryKey: hit.key }, { searchText: makeSearchText(hit.title, hit.author) }] },
   });
-  if (existing) return existing;
-  return db.book.create({
+  const genres = genresFromSubjects(hit.subjects ?? []);
+  if (existing) {
+    if (genres.length) await addGenres(existing.id, genres);
+    if (!existing.pageCount && hit.pageCount) {
+      return db.book.update({ where: { id: existing.id }, data: { pageCount: hit.pageCount } });
+    }
+    return existing;
+  }
+  const book = await db.book.create({
     data: {
       title: hit.title,
       author: hit.author,
@@ -72,10 +86,13 @@ export async function upsertFromOpenLibrary(hit: OpenLibraryHit, addedById?: str
       isbn: hit.isbn,
       coverUrl: hit.coverUrl,
       openLibraryKey: hit.key,
+      pageCount: hit.pageCount ?? null,
       searchText: makeSearchText(hit.title, hit.author),
       addedById,
     },
   });
+  if (genres.length) await addGenres(book.id, genres);
+  return book;
 }
 
 /** Ищет книгу по ISBN в Open Library. null — не нашли или сервис недоступен. */

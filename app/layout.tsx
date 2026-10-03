@@ -27,6 +27,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <nav className="flex items-center gap-3 text-sm">
                 {[
                   ["/feed", "Лента"],
+                  ["/discover", "Обзор"],
                   ["/lists", "Списки"],
                   ["/stats", "Итоги"],
                   [`/u/${session.user.id}`, "Профиль"],
@@ -37,9 +38,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 ))}
               </nav>
             ) : (
+              <>
+              <Link href="/discover" className="text-sm text-neutral-400 hover:text-neutral-100">
+                Обзор
+              </Link>
               <Link href="/login" className="btn-primary py-1.5">
                 Войти
               </Link>
+              </>
             )}
           </div>
         </header>

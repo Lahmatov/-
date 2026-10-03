@@ -126,6 +126,57 @@ final class APIClient {
         return response.book
     }
 
+    // MARK: - Обзор
+
+    private struct GenresResponse: Decodable { let genres: [Genre] }
+    private struct BookGenresResponse: Decodable { let genres: [GenreRef] }
+    private struct RecommendationsResponse: Decodable { let items: [Recommendation] }
+
+    func author(name: String) async throws -> AuthorDetails {
+        try await send("GET", "authors/\(name)")
+    }
+
+    func genres() async throws -> [Genre] {
+        let response: GenresResponse = try await send("GET", "genres")
+        return response.genres
+    }
+
+    func genre(slug: String) async throws -> GenreBooks {
+        try await send("GET", "genres/\(slug)")
+    }
+
+    func addGenre(_ slug: String, bookId: String) async throws -> [GenreRef] {
+        let response: BookGenresResponse = try await send("POST", "books/\(bookId)/genres", json: ["slug": slug])
+        return response.genres
+    }
+
+    func top(genre: String? = nil) async throws -> TopBooks {
+        try await send("GET", "top", query: genre.map { [URLQueryItem(name: "genre", value: $0)] } ?? [])
+    }
+
+    func recommendations() async throws -> [Recommendation] {
+        let response: RecommendationsResponse = try await send("GET", "recommendations")
+        return response.items
+    }
+
+    /// currentPage = nil сбрасывает прогресс; totalPages — число страниц в издании читателя.
+    func setProgress(currentPage: Int?, totalPages: Int?, bookId: String) async throws -> ShelfEntry {
+        struct Body: Encodable {
+            let currentPage: Int?
+            let totalPages: Int?
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(currentPage, forKey: .currentPage) // null явно — сброс прогресса
+                try container.encodeIfPresent(totalPages, forKey: .totalPages)
+            }
+            enum CodingKeys: String, CodingKey { case currentPage, totalPages }
+        }
+        let response: EntryResponse = try await send(
+            "PUT", "shelf/\(bookId)/progress", json: Body(currentPage: currentPage, totalPages: totalPages)
+        )
+        return response.entry
+    }
+
     // MARK: - Люди и лента
 
     private struct UsersResponse: Decodable { let users: [PublicUser] }

@@ -8,6 +8,7 @@ struct SearchView: View {
     @State private var addingKey: String?
     @State private var showAddBook = false
     @State private var showScanner = false
+    @State private var discover = DiscoverData()
     /// «Добавить вручную» из сканера: форму открываем после того, как сканер закроется,
     /// иначе SwiftUI не покажет второй sheet, пока первый ещё уходит с экрана.
     @State private var pendingManualAdd = false
@@ -20,12 +21,7 @@ struct SearchView: View {
         NavigationStack(path: $path) {
             List {
                 if trimmedQuery.isEmpty {
-                    ContentUnavailableView(
-                        "Найдите книгу",
-                        systemImage: "magnifyingglass",
-                        description: Text("Ищем по названию и автору в нашем каталоге и в Open Library")
-                    )
-                    .listRowBackground(Color.clear)
+                    DiscoverSections(data: discover)
                 } else {
                     resultSections
                     Section {
@@ -39,6 +35,8 @@ struct SearchView: View {
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Название или автор")
             .autocorrectionDisabled()
             .task(id: trimmedQuery) { await search(trimmedQuery) }
+            .task { discover = await DiscoverData.load(auth.api) }
+            .refreshable { if trimmedQuery.isEmpty { discover = await DiscoverData.load(auth.api) } }
             .overlay(alignment: .top) {
                 if isSearching { ProgressView().padding(.top, 8) }
             }
@@ -121,6 +119,7 @@ struct SearchView: View {
     private func search(_ query: String) async {
         guard query.count >= 2 else {
             results = nil
+            isSearching = false // поиск, который шёл для прежнего запроса, отменён
             return
         }
         // Небольшая пауза, чтобы не отправлять запрос на каждую букву. Новый ввод отменяет задачу.

@@ -9,6 +9,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     book: bookJSON(details.book),
     myEntry: details.mine ? entryJSON(details.mine) : null,
     stats: details.stats,
+    genres: details.genres,
     reviews: details.reviews.map((r) => ({
       id: r.id,
       userId: r.userId,

@@ -46,6 +46,12 @@ struct BookRowView: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
+                if let progress = entry?.progress(pageCount: book.pageCount) {
+                    ProgressView(value: progress)
+                        .tint(.accentColor)
+                        .frame(maxWidth: 140)
+                        .accessibilityLabel("Прочитано \(Int(progress * 100))%")
+                }
                 if let dates = entry.flatMap(Self.dates) {
                     Text(dates)
                         .font(.caption)

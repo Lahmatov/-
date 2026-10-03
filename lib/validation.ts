@@ -77,4 +77,11 @@ export const openLibraryHitSchema = z.object({
     .refine((u) => u.startsWith("https://covers.openlibrary.org/"), "Обложка не из Open Library")
     .nullish()
     .transform((v) => v ?? null),
+  pageCount: z.number().int().min(1).max(20000).nullish().transform((v) => v ?? null),
+  subjects: z.array(z.string().max(200)).max(30).nullish().transform((v) => v ?? null),
+});
+
+export const progressSchema = z.object({
+  currentPage: z.number().int().min(0, "Страница не может быть отрицательной").max(20000).nullable(),
+  totalPages: z.number().int().min(1).max(20000).nullish(),
 });

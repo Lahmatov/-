@@ -10,11 +10,12 @@ import { db } from "./db";
 import { upsertFromOpenLibrary } from "./openlibrary";
 import { isStatus } from "./status";
 import { parseBooksCsv, parseKindleClippings, type ImportedBook } from "./importers";
-import { firstIssue, goalSchema, listSchema, nameSchema, openLibraryHitSchema, registerSchema } from "./validation";
+import { firstIssue, goalSchema, listSchema, nameSchema, openLibraryHitSchema, progressSchema, registerSchema } from "./validation";
+import { addGenres, isGenre } from "./genres";
 import { follow, unfollow, updateName } from "./social";
 import { addToList, createList, deleteList, removeFromList, updateList } from "./lists";
 import { setGoal } from "./stats";
-import { bookExists, createBook, importBooks, saveShelfReview, setShelfStatus } from "./shelf";
+import { bookExists, createBook, importBooks, saveShelfReview, setProgress, setShelfStatus } from "./shelf";
 
 export type FormState = { error?: string; message?: string } | undefined;
 
@@ -277,5 +278,37 @@ export async function toggleListItem(listId: string, bookId: string, add: boolea
   if (add) await addToList(listId, me, bookId);
   else await removeFromList(listId, me, bookId);
   revalidateLists(me, listId);
+  revalidatePath(`/books/${bookId}`);
+}
+
+// ---------- Прогресс и жанры ----------
+
+export async function saveProgress(bookId: string, _: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireUserId();
+  const num = (k: string) => {
+    const v = String(formData.get(k) ?? "").trim();
+    return v === "" ? null : Number(v);
+  };
+  const parsed = progressSchema.safeParse({ currentPage: num("currentPage"), totalPages: num("totalPages") });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const result = await setProgress(me, bookId, parsed.data.currentPage, parsed.data.totalPages);
+  if ("error" in result) return { error: result.error };
+  revalidatePath(`/books/${bookId}`);
+  revalidatePath("/");
+  return { message: "Прогресс сохранён" };
+}
+
+export async function addGenreAction(bookId: string, formData: FormData) {
+  const me = await requireUserId();
+  const slug = formData.get("slug");
+  if (!isGenre(slug) || !(await bookExists(bookId))) return;
+  await addGenres(bookId, [slug], me);
+  revalidatePath(`/books/${bookId}`);
+}
+
+export async function removeGenreAction(bookId: string, slug: string) {
+  const me = await requireUserId();
+  // Убрать можно только жанр, который поставил сам.
+  await db.bookGenre.deleteMany({ where: { bookId, genreSlug: slug, addedById: me } });
   revalidatePath(`/books/${bookId}`);
 }

@@ -12,10 +12,14 @@ export async function GET(req: Request) {
     db.shelfEntry.groupBy({ by: ["status"], where: { userId }, _count: true }),
     db.shelfEntry.findMany({
       where: { userId, ...(isStatus(status) ? { status } : {}) },
-      include: { book: true },
+      include: { book: { include: { genres: { select: { genreSlug: true } } } } },
       orderBy: { updatedAt: "desc" },
     }),
   ]);
   const counts = Object.fromEntries(STATUSES.map((s) => [s, groups.find((g) => g.status === s)?._count ?? 0]));
-  return json({ counts, items: entries.map((e) => ({ book: bookJSON(e.book), entry: entryJSON(e) })) });
+  return json({ counts, items: entries.map((e) => ({
+      book: bookJSON(e.book),
+      entry: entryJSON(e),
+      genres: e.book.genres.map((g) => g.genreSlug),
+    })) });
 }

@@ -1,9 +1,14 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { getBookDetails } from "@/lib/shelf";
+import { getBookDetails, progressOf } from "@/lib/shelf";
+import { db } from "@/lib/db";
+import { GENRES } from "@/lib/genres";
+import { AuthorLinks } from "@/components/AuthorLinks";
+import { ProgressBar } from "@/components/ProgressBar";
+import { ProgressForm } from "@/components/ProgressForm";
 import { STATUS_LABEL, isStatus, type Status } from "@/lib/status";
 import Link from "next/link";
-import { removeFromShelf, setStatus, toggleListItem } from "@/lib/actions";
+import { addGenreAction, removeFromShelf, removeGenreAction, setStatus, toggleListItem } from "@/lib/actions";
 import { getMyLists } from "@/lib/lists";
 import { ListForm } from "@/components/ListForm";
 import { BookCover } from "@/components/BookCover";
@@ -53,7 +58,14 @@ export default async function BookPage({
 
   const details = await getBookDetails(id, userId ?? null);
   if (!details) notFound();
-  const { book, mine, stats, reviews } = details;
+  const { book, mine, stats, reviews, genres } = details;
+  const myGenreSlugs = new Set(
+    userId
+      ? (await db.bookGenre.findMany({ where: { bookId: book.id, addedById: userId }, select: { genreSlug: true } })).map(
+          (g) => g.genreSlug,
+        )
+      : [],
+  );
   const myLists = userId ? await getMyLists(userId, book.id) : null;
   const inLists = myLists?.filter((l) => l.containsBook).length ?? 0;
   const myStatus = mine && isStatus(mine.status) ? mine.status : null;
@@ -69,9 +81,41 @@ export default async function BookPage({
         <div className="space-y-3">
           <h1 className="text-3xl font-black">{book.title}</h1>
           <p className="text-lg text-neutral-300">
-            {book.author}
+            <AuthorLinks author={book.author} />
             {book.year ? ` · ${book.year}` : ""}
+            {book.pageCount ? ` · ${book.pageCount} стр.` : ""}
           </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {genres.map((g) => (
+              <span key={g.slug} className="flex items-center gap-1 rounded-full bg-neutral-800 px-3 py-1 text-xs">
+                <Link href={`/genres/${g.slug}`} className="hover:text-amber-400">
+                  {g.name}
+                </Link>
+                {myGenreSlugs.has(g.slug) && (
+                  <form action={removeGenreAction.bind(null, book.id, g.slug)}>
+                    <button className="text-neutral-500 hover:text-red-400" aria-label={`Убрать жанр ${g.name}`}>
+                      ×
+                    </button>
+                  </form>
+                )}
+              </span>
+            ))}
+            {userId && (
+              <form action={addGenreAction.bind(null, book.id)} className="flex items-center gap-1">
+                <select name="slug" className="input w-auto py-1 text-xs" aria-label="Добавить жанр" defaultValue="">
+                  <option value="" disabled>
+                    + жанр
+                  </option>
+                  {GENRES.filter((g) => !genres.some((x) => x.slug === g.slug)).map((g) => (
+                    <option key={g.slug} value={g.slug}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <SubmitButton className="btn-ghost px-2 py-1 text-xs">ОК</SubmitButton>
+              </form>
+            )}
+          </div>
           <div className="flex gap-6 text-sm">
             <div>
               <div className="text-2xl font-bold text-amber-400">
@@ -109,6 +153,14 @@ export default async function BookPage({
               </form>
             )}
           </div>
+          {mine && (mine.status === "READING" || mine.status === "PAUSED") && (
+            <div className="space-y-1">
+              <ProgressForm bookId={book.id} currentPage={mine.currentPage} totalPages={mine.totalPages ?? book.pageCount} />
+              {progressOf(mine, book) !== null && (
+                <ProgressBar value={progressOf(mine, book)!} />
+              )}
+            </div>
+          )}
           {mine && (
             <ReviewForm
               // Кнопки статуса меняют даты — пересоздаём форму, чтобы поля показали новые значения.

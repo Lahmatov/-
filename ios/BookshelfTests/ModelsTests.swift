@@ -106,4 +106,28 @@ final class ModelsTests: XCTestCase {
         """)
         XCTAssertEqual(lists.first?.containsBook, true)
     }
+
+    func testDecodesDiscoveryAndProgress() throws {
+        let entry = try decode(ShelfEntry.self, """
+        {"status":"READING","startedAt":null,"finishedAt":null,"rating":null,"review":null,"isPublic":true,
+         "currentPage":120,"totalPages":null,"updatedAt":"2026-10-03T12:00:00.000Z"}
+        """)
+        XCTAssertEqual(entry.progress(pageCount: 300), 0.4)
+        XCTAssertNil(entry.progress(pageCount: nil))
+
+        let top = try decode(TopBooks.self, """
+        {"top":[{"book":{"id":"b1","title":"Дюна","author":"Фрэнк Герберт","year":1965,"isbn":null,"coverUrl":null,"pageCount":600},
+                 "avgRating":9.5,"ratingsCount":4}],
+         "trending":[{"book":{"id":"b2","title":"Солярис","author":"Станислав Лем","year":1961,"isbn":null,"coverUrl":null,"pageCount":null},
+                      "count":3}]}
+        """)
+        XCTAssertEqual(top.top.first?.book.pageCount, 600)
+        XCTAssertEqual(top.trending.first?.count, 3)
+
+        let book = try decode(Book.self, """
+        {"id":"b","title":"Двенадцать стульев","author":"Илья Ильф, Евгений Петров","year":1928,"isbn":null,"coverUrl":null}
+        """)
+        XCTAssertEqual(book.authors, ["Илья Ильф", "Евгений Петров"])
+        XCTAssertNil(book.pageCount, "старый ответ без pageCount тоже читается")
+    }
 }
