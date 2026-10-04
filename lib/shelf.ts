@@ -4,6 +4,7 @@ import { bookGenres } from "./genres";
 import type { Lang } from "./i18n";
 import { findDuplicate, makeSearchText } from "./books";
 import type { ImportedBook } from "./importers";
+import { importQuotes } from "./quotes";
 import type { Status } from "./status";
 
 // Общая логика полки и каталога — её используют и server actions сайта, и JSON API для iOS.
@@ -75,6 +76,7 @@ export async function saveShelfReview(userId: string, bookId: string, data: Revi
 /** Добавляет импортированные книги в каталог и на полку, не трогая уже отмеченные. */
 export async function importBooks(userId: string, items: ImportedBook[]) {
   let added = 0;
+  let quotes = 0;
   for (const item of items.slice(0, 5000)) {
     const book =
       (await findDuplicate(item.title, item.author)) ??
@@ -87,6 +89,7 @@ export async function importBooks(userId: string, items: ImportedBook[]) {
           addedById: userId,
         },
       }));
+    if (item.quotes) quotes += await importQuotes(userId, book.id, item.quotes);
     const exists = await db.shelfEntry.findUnique({ where: { userId_bookId: { userId, bookId: book.id } } });
     if (exists) continue;
     await db.shelfEntry.create({
@@ -101,7 +104,7 @@ export async function importBooks(userId: string, items: ImportedBook[]) {
     });
     added++;
   }
-  return { found: items.length, added };
+  return { found: items.length, added, quotes };
 }
 
 /** Всё для страницы книги: сама книга, моя запись, статистика и чужие публичные отзывы. */

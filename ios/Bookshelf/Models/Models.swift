@@ -190,6 +190,8 @@ struct Shelf: Codable, Sendable {
 struct ImportResult: Codable, Sendable {
     let found: Int
     let added: Int
+    /// Цитаты из выделений Kindle (старый сервер поле не присылает).
+    let quotes: Int?
 }
 
 /// Что отправляем при сохранении оценки/отзыва. Даты — календарные дни в формате yyyy-MM-dd.
@@ -430,4 +432,48 @@ struct Wrapped: Codable, Sendable {
     let longestBook: LongPick?
     let busiestMonth: Int?
     let byMonth: [Int]
+}
+
+// MARK: - Цитаты
+
+struct Quote: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let text: String
+    let page: Int?
+    /// Личная заметка — приходит только автору цитаты.
+    let note: String?
+    let isPublic: Bool
+    let createdAt: Date
+    let mine: Bool
+    let user: PublicUser
+    /// Есть в списке «Мои цитаты», где цитаты из разных книг.
+    let book: Book?
+}
+
+struct BookQuotes: Codable, Sendable {
+    let mine: [Quote]
+    let others: [Quote]
+}
+
+struct QuotePage: Codable, Sendable {
+    let quotes: [Quote]
+    let nextCursor: String?
+}
+
+struct QuoteDraft: Encodable, Sendable {
+    var text: String
+    var page: Int?
+    var note: String?
+    var isPublic: Bool
+
+    private enum CodingKeys: String, CodingKey { case text, page, note, isPublic }
+
+    // Пустые поля отправляем явным null: в PATCH так стирается страница или заметка.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(text, forKey: .text)
+        try c.encode(page, forKey: .page)
+        try c.encode(note, forKey: .note)
+        try c.encode(isPublic, forKey: .isPublic)
+    }
 }

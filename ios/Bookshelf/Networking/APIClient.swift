@@ -198,6 +198,32 @@ final class APIClient {
         let _: OK = try await send("DELETE", "comments/\(id)")
     }
 
+    // MARK: Цитаты
+
+    private struct QuoteResponse: Decodable { let quote: Quote }
+
+    func quotes(bookId: String) async throws -> BookQuotes {
+        try await send("GET", "books/\(bookId)/quotes")
+    }
+
+    func addQuote(_ draft: QuoteDraft, bookId: String) async throws -> Quote {
+        let response: QuoteResponse = try await send("POST", "books/\(bookId)/quotes", json: draft)
+        return response.quote
+    }
+
+    func updateQuote(id: String, _ draft: QuoteDraft) async throws -> Quote {
+        let response: QuoteResponse = try await send("PATCH", "quotes/\(id)", json: draft)
+        return response.quote
+    }
+
+    func deleteQuote(id: String) async throws {
+        let _: OK = try await send("DELETE", "quotes/\(id)")
+    }
+
+    func myQuotes(cursor: String? = nil) async throws -> QuotePage {
+        try await send("GET", "quotes", query: cursor.map { [URLQueryItem(name: "cursor", value: $0)] } ?? [])
+    }
+
     func notifications() async throws -> NotificationList {
         try await send("GET", "notifications")
     }

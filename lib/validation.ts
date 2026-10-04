@@ -89,3 +89,24 @@ export const progressSchema = z.object({
 export const commentSchema = z.object({
   text: z.string().trim().min(1, "Пустой комментарий").max(2000, "Слишком длинный комментарий"),
 });
+
+const optionalText = (max: number) =>
+  z
+    .string()
+    .max(max, "Слишком длинный текст")
+    .nullish()
+    .transform((v) => v?.trim() || null);
+
+export const quoteSchema = z.object({
+  text: z.string().trim().min(1, "Пустая цитата").max(5000, "Слишком длинная цитата"),
+  page: z.number().int().min(1).max(100000).nullish().transform((v) => v ?? null),
+  note: optionalText(2000),
+  isPublic: z.boolean().default(false),
+});
+
+export const quotePatchSchema = z.object({
+  text: z.string().trim().min(1, "Пустая цитата").max(5000, "Слишком длинная цитата").optional(),
+  page: z.number().int().min(1).max(100000).nullable().optional(),
+  note: optionalText(2000).optional(),
+  isPublic: z.boolean().optional(),
+});

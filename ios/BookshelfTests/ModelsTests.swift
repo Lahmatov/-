@@ -168,3 +168,30 @@ final class PathSegmentTests: XCTestCase {
         XCTAssertEqual(APIClient.pathSegment("Лев Толстой"), "%D0%9B%D0%B5%D0%B2%20%D0%A2%D0%BE%D0%BB%D1%81%D1%82%D0%BE%D0%B9")
     }
 }
+
+final class QuoteTests: XCTestCase {
+    func testDecodesBookQuotes() throws {
+        let json = """
+        {"mine":[{"id":"q1","text":"Рукописи не горят","page":245,"note":"моё","isPublic":false,
+                  "createdAt":"2026-10-04T20:20:37.204Z","mine":true,"user":{"id":"u1","name":"Аня"}}],
+         "others":[{"id":"q2","text":"Never","page":null,"note":null,"isPublic":true,
+                  "createdAt":"2026-10-04T20:20:37Z","mine":false,"user":{"id":"u2","name":"Борис"}}]}
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { try DateCoding.decode($0) }
+        let quotes = try decoder.decode(BookQuotes.self, from: Data(json.utf8))
+        XCTAssertEqual(quotes.mine.first?.page, 245)
+        XCTAssertEqual(quotes.mine.first?.note, "моё")
+        XCTAssertNil(quotes.others.first?.book)
+        XCTAssertEqual(quotes.others.first?.user.name, "Борис")
+    }
+
+    func testDraftSendsExplicitNulls() throws {
+        let draft = QuoteDraft(text: "Текст", page: nil, note: nil, isPublic: true)
+        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(draft)) as? [String: Any]
+        XCTAssertEqual(object?["text"] as? String, "Текст")
+        XCTAssertTrue(object?["page"] is NSNull, "null стирает страницу в PATCH")
+        XCTAssertTrue(object?["note"] is NSNull)
+        XCTAssertEqual(object?["isPublic"] as? Bool, true)
+    }
+}

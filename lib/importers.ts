@@ -1,6 +1,8 @@
 import type { Status } from "./status";
 import { isStatus } from "./status";
 
+export type ImportedQuote = { text: string; page: number | null; note: string | null };
+
 export type ImportedBook = {
   title: string;
   author: string;
@@ -9,23 +11,43 @@ export type ImportedBook = {
   rating?: number | null; // 1..10
   review?: string | null;
   finishedAt?: Date | null;
+  quotes?: ImportedQuote[];
 };
 
 /**
  * Kindle: файл documents/My Clippings.txt с устройства.
- * Каждая запись отделена строкой "==========", первая строка — "Название (Автор)".
+ * Каждая запись отделена строкой "==========": первая строка — "Название (Автор)",
+ * вторая — тип и место ("- Your Highlight on page 12 | ..."), дальше — текст.
+ * Выделения становятся цитатами, заметки прикрепляются к последнему выделению, закладки пропускаются.
  */
 export function parseKindleClippings(text: string): ImportedBook[] {
   const seen = new Map<string, ImportedBook>();
-  for (const block of text.replace(/^﻿/, "").split(/^==========\s*$/m)) {
-    const header = block.trim().split(/\r?\n/)[0]?.replace(/^﻿/, "").trim();
+  for (const block of text.replace(/^\uFEFF/, "").split(/^==========\s*$/m)) {
+    const lines = block.trim().split(/\r?\n/);
+    const header = lines[0]?.replace(/^\uFEFF/, "").trim();
     if (!header) continue;
     const m = header.match(/^(.*)\(([^()]*)\)\s*$/);
     const title = (m ? m[1] : header).trim();
     const author = (m ? m[2] : "").trim() || "Неизвестный автор";
     if (!title) continue;
     const key = `${title}|${author}`.toLowerCase();
-    if (!seen.has(key)) seen.set(key, { title, author, status: "READING" });
+    let book = seen.get(key);
+    if (!book) {
+      book = { title, author, status: "READING", quotes: [] };
+      seen.set(key, book);
+    }
+    const meta = (lines[1] ?? "").toLowerCase();
+    const body = lines.slice(2).join("\n").trim();
+    if (!body) continue;
+    const quotes = book.quotes!;
+    if (/highlight|выделен|подчерк/.test(meta)) {
+      if (quotes.some((q) => q.text === body)) continue;
+      const page = meta.match(/(?:page|стр\S*)\s+(\d+)/);
+      quotes.push({ text: body.slice(0, 5000), page: page ? Number(page[1]) : null, note: null });
+    } else if (/note|заметк/.test(meta) && quotes.length) {
+      const last = quotes[quotes.length - 1];
+      last.note = (last.note ? `${last.note}\n` : "") + body.slice(0, 2000);
+    }
   }
   return [...seen.values()];
 }

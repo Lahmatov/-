@@ -241,3 +241,20 @@
 "Экспорт в CSV" = "Export to CSV";
 "Файл в том же формате, что и импорт: его можно загрузить обратно или открыть в Excel и Numbers." = "Same format as import: you can load it back or open it in Excel or Numbers.";
 "Письмо отправлено — проверьте почту." = "Email sent — check your inbox.";
+
+/* Цитаты */
+"Цитаты" = "Quotes";
+"Мои цитаты" = "My quotes";
+"Добавить цитату" = "Add quote";
+"Сохраняйте понравившиеся места из книги" = "Save passages you liked";
+"Поделиться" = "Share";
+"Видна только вам" = "Only visible to you";
+"стр. %@" = "p. %@";
+"Цитата" = "Quote";
+"Новая цитата" = "New quote";
+"Заметка для себя" = "Private note";
+"Видна другим читателям" = "Visible to other readers";
+"Публичные цитаты видны на странице книги. Заметка всегда остаётся личной." = "Public quotes appear on the book page. Your note always stays private.";
+"Цитат пока нет" = "No quotes yet";
+"Добавляйте их на странице книги или импортируйте выделения из Kindle в профиле." = "Add them on a book page or import your Kindle highlights from your profile.";
+"Новых цитат: %@" = "New quotes: %@";

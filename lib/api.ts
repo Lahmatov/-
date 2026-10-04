@@ -104,3 +104,29 @@ export const listSummaryJSON = (l: {
   isPublic: l.isPublic,
   count: l._count?.items ?? 0,
 });
+
+export const quoteJSON = (
+  q: {
+    id: string;
+    text: string;
+    page: number | null;
+    note: string | null;
+    isPublic: boolean;
+    createdAt: Date;
+    userId: string;
+    user: { id: string; name: string | null };
+    book?: Parameters<typeof bookJSON>[0];
+  },
+  viewerId: string,
+) => ({
+  id: q.id,
+  text: q.text,
+  page: q.page,
+  // Заметка к цитате личная: другим не показываем.
+  note: q.userId === viewerId ? q.note : null,
+  isPublic: q.isPublic,
+  createdAt: q.createdAt,
+  mine: q.userId === viewerId,
+  user: publicUserJSON(q.user),
+  ...(q.book ? { book: bookJSON(q.book) } : {}),
+});

@@ -61,6 +61,8 @@ struct BookDetailView: View {
                 }
             }
 
+            QuotesSection(book: details.book)
+
             Section("Отзывы читателей") {
                 if details.reviews.isEmpty {
                     Text("Пока никто не оставил отзыв")

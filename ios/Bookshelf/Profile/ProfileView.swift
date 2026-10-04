@@ -53,6 +53,11 @@ struct ProfileView: View {
                         Label("Мои списки", systemImage: "list.bullet.rectangle")
                     }
                     NavigationLink {
+                        MyQuotesView()
+                    } label: {
+                        Label("Мои цитаты", systemImage: "quote.opening")
+                    }
+                    NavigationLink {
                         FollowingView()
                     } label: {
                         Label("Подписки", systemImage: "person.2")
@@ -134,6 +139,9 @@ struct ProfileView: View {
             defer { isImporting = false }
             let imported = try await auth.api.importFile(data, filename: url.lastPathComponent, kind: importKind)
             infoMessage = L("Найдено книг: %@, добавлено на полку: %@", String(imported.found), String(imported.added))
+            if let quotes = imported.quotes, quotes > 0 {
+                infoMessage = (infoMessage ?? "") + "\n" + L("Новых цитат: %@", String(quotes))
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
