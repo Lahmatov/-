@@ -388,37 +388,34 @@ struct ChallengeDetailView: View {
 }
 
 /// Значки за выполненные челленджи — в профиле. Пока значков нет, раздел не показывается.
+/// Загружает их сам профиль: у пустого раздела нет строк, и его собственный .task не запустился бы.
 struct BadgesSection: View {
-    @Environment(AuthStore.self) private var auth
-    @State private var badges: [Badge] = []
+    let badges: [Badge]
 
     var body: some View {
-        Group {
-            if !badges.isEmpty {
-                Section("Значки") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(badges) { badge in
-                                NavigationLink(value: ChallengeRoute(id: badge.id)) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "rosette")
-                                            .font(.system(size: 32))
-                                            .foregroundStyle(.orange)
-                                        Text(badge.title)
-                                            .font(.caption)
-                                            .lineLimit(2)
-                                            .multilineTextAlignment(.center)
-                                    }
-                                    .frame(width: 84)
+        if !badges.isEmpty {
+            Section("Значки") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(badges) { badge in
+                            NavigationLink(value: ChallengeRoute(id: badge.id)) {
+                                VStack(spacing: 4) {
+                                    Image(systemName: "rosette")
+                                        .font(.system(size: 32))
+                                        .foregroundStyle(.orange)
+                                    Text(badge.title)
+                                        .font(.caption)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.center)
                                 }
-                                .buttonStyle(.plain)
+                                .frame(width: 84)
                             }
+                            .buttonStyle(.plain)
                         }
-                        .padding(.vertical, 4)
                     }
+                    .padding(.vertical, 4)
                 }
             }
         }
-        .task { badges = (try? await auth.api.badges()) ?? [] }
     }
 }

@@ -30,17 +30,19 @@ struct QuotesSection: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            // Модификаторы на Section применяются к каждой строке отдельно (несколько sheet на одну
+            // привязку), поэтому загрузка, окна и ошибки висят на одной строке — кнопке «Добавить цитату».
             Button("Добавить цитату", systemImage: "plus") { editing = .new }
                 .accessibilityIdentifier("addQuote")
+                .task { await load() }
+                .sheet(item: $editing) { target in
+                    QuoteEditor(bookId: book.id, quote: target.quote) { await load() }
+                }
+                .sheet(item: $sharing) { QuoteShareSheet(quote: $0, book: book) }
+                .errorAlert($errorMessage)
         } header: {
             Text("Цитаты")
         }
-        .task { await load() }
-        .sheet(item: $editing) { target in
-            QuoteEditor(bookId: book.id, quote: target.quote) { await load() }
-        }
-        .sheet(item: $sharing) { QuoteShareSheet(quote: $0, book: book) }
-        .errorAlert($errorMessage)
     }
 
     private func shareButton(_ quote: Quote) -> some View {

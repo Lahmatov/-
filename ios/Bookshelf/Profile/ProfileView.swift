@@ -8,6 +8,7 @@ struct ProfileView: View {
     @State private var isImporting = false
     @State private var confirmDelete = false
     @State private var infoMessage: String?
+    @State private var badges: [Badge] = []
     @State private var errorMessage: String?
     @State private var isEditingName = false
     @State private var nameText = ""
@@ -46,7 +47,7 @@ struct ProfileView: View {
                     }
                 }
 
-                BadgesSection()
+                BadgesSection(badges: badges)
 
                 Section {
                     NavigationLink {
@@ -94,6 +95,7 @@ struct ProfileView: View {
             }
             .navigationTitle("Профиль")
             .appDestinations()
+            .task { badges = (try? await auth.api.badges()) ?? [] }
             .alert("Ваше имя", isPresented: $isEditingName) {
                 TextField("Имя", text: $nameText)
                     .textContentType(.name)

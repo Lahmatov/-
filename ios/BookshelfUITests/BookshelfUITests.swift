@@ -15,8 +15,9 @@ final class BookshelfUITests: XCTestCase {
         app.launch()
     }
 
+    /// Любой элемент с текстом: строка списка с жестами может быть и текстом, и кнопкой.
     private func element(containing text: String) -> XCUIElement {
-        app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+        app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
     }
 
     /// Прокручивает список, пока элемент не появится (ячейки List создаются только на экране).
@@ -50,20 +51,22 @@ final class BookshelfUITests: XCTestCase {
 
     func testOpenBookAndAddQuote() {
         launch()
-        let book = app.staticTexts["Мастер и Маргарита"].firstMatch
+        let book = element(containing: "Мастер и Маргарита")
         XCTAssertTrue(book.waitForExistence(timeout: 10), "книга на полке")
         book.tap()
+        XCTAssertTrue(app.navigationBars.buttons.firstMatch.waitForExistence(timeout: 5), "открылась книга")
 
         scrollTo(element(containing: "Рукописи не горят"))
         scrollTo(app.buttons["addQuote"]).tap()
 
         let text = app.textViews["quoteText"]
-        XCTAssertTrue(text.waitForExistence(timeout: 5))
+        XCTAssertTrue(text.waitForExistence(timeout: 5), "открылся редактор цитаты")
         text.tap()
         text.typeText("Never shall I forget")
         app.buttons["saveQuote"].tap()
 
-        XCTAssertTrue(element(containing: "Never shall I forget").waitForExistence(timeout: 5), "новая цитата в списке")
+        XCTAssertTrue(text.waitForNonExistence(timeout: 5), "редактор закрылся после сохранения")
+        XCTAssertTrue(scrollTo(element(containing: "Never shall I forget")).exists, "новая цитата в списке")
     }
 
     func testChallengesAndClubsOpen() {
