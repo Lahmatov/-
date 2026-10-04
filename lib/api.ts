@@ -130,3 +130,41 @@ export const quoteJSON = (
   user: publicUserJSON(q.user),
   ...(q.book ? { book: bookJSON(q.book) } : {}),
 });
+
+type ClubUser = { id: string; name: string | null };
+
+export const clubSummaryJSON = (c: {
+  id: string;
+  name: string;
+  description: string | null;
+  chapters: number | null;
+  ownerId: string;
+  book: Parameters<typeof bookJSON>[0];
+  _count?: { members: number; posts: number };
+}) => ({
+  id: c.id,
+  name: c.name,
+  description: c.description,
+  chapters: c.chapters,
+  book: bookJSON(c.book),
+  memberCount: c._count?.members ?? 0,
+  postCount: c._count?.posts ?? 0,
+});
+
+export const clubPostJSON = (p: {
+  id: string;
+  chapter: number | null;
+  text: string;
+  createdAt: Date;
+  userId: string;
+  user: ClubUser;
+  spoiler?: boolean;
+}) => ({
+  id: p.id,
+  chapter: p.chapter,
+  // Спойлер: текст не отдаём, пока участник не дочитает до этой главы.
+  text: p.spoiler ? null : p.text,
+  spoiler: p.spoiler ?? false,
+  createdAt: p.createdAt,
+  user: publicUserJSON(p.user),
+});

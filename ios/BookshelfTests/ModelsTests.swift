@@ -195,3 +195,30 @@ final class QuoteTests: XCTestCase {
         XCTAssertEqual(object?["isPublic"] as? Bool, true)
     }
 }
+
+final class ClubTests: XCTestCase {
+    func testDecodesClubAndChapterRange() throws {
+        let json = """
+        {"id":"c1","name":"Клуб","description":null,"chapters":null,"inviteCode":"AB3DEF9K",
+         "book":{"id":"b1","title":"Dune","author":"Frank Herbert","year":1965,"isbn":null,"coverUrl":null,"pageCount":null},
+         "isOwner":true,"myChapter":2,
+         "members":[{"user":{"id":"u1","name":"Аня"},"chapter":2,"isOwner":true},
+                    {"user":{"id":"u2","name":"Борис"},"chapter":27,"isOwner":false}]}
+        """
+        let club = try JSONDecoder().decode(ClubDetails.self, from: Data(json.utf8))
+        XCTAssertEqual(club.members.count, 2)
+        XCTAssertEqual(club.chapterRange, 1...37, "без числа глав — с запасом от самого быстрого участника")
+    }
+
+    func testSpoilerPostHasNoText() throws {
+        let json = """
+        {"id":"p1","chapter":5,"text":null,"spoiler":true,"createdAt":"2026-10-04T20:48:44.643Z","user":{"id":"u1","name":"Аня"}}
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { try DateCoding.decode($0) }
+        let post = try decoder.decode(ClubPost.self, from: Data(json.utf8))
+        XCTAssertTrue(post.spoiler)
+        XCTAssertNil(post.text)
+        XCTAssertEqual(post.chapter, 5)
+    }
+}

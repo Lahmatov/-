@@ -53,6 +53,11 @@ struct ProfileView: View {
                         Label("Мои списки", systemImage: "list.bullet.rectangle")
                     }
                     NavigationLink {
+                        ClubsView()
+                    } label: {
+                        Label("Книжные клубы", systemImage: "person.3")
+                    }
+                    NavigationLink {
                         MyQuotesView()
                     } label: {
                         Label("Мои цитаты", systemImage: "quote.opening")

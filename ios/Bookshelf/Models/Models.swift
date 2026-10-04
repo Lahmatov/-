@@ -477,3 +477,58 @@ struct QuoteDraft: Encodable, Sendable {
         try c.encode(isPublic, forKey: .isPublic)
     }
 }
+
+// MARK: - Книжные клубы
+
+struct ClubSummary: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let description: String?
+    let chapters: Int?
+    let book: Book
+    let memberCount: Int
+    let postCount: Int
+}
+
+struct ClubMemberInfo: Codable, Identifiable, Hashable, Sendable {
+    let user: PublicUser
+    let chapter: Int
+    let isOwner: Bool
+    var id: String { user.id }
+}
+
+struct ClubDetails: Codable, Identifiable, Sendable {
+    let id: String
+    let name: String
+    let description: String?
+    let chapters: Int?
+    let inviteCode: String
+    let book: Book
+    let isOwner: Bool
+    let myChapter: Int
+    let members: [ClubMemberInfo]
+
+    /// Главы для выбора: из настроек клуба, иначе с запасом от того, где все сейчас.
+    var chapterRange: ClosedRange<Int> {
+        if let chapters { return 1...chapters }
+        return 1...max(30, (members.map(\.chapter).max() ?? 0) + 10)
+    }
+}
+
+struct ClubPost: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    /// nil — общее сообщение без спойлеров.
+    let chapter: Int?
+    /// nil, если это спойлер к главе, до которой я ещё не дочитал.
+    let text: String?
+    let spoiler: Bool
+    let createdAt: Date
+    let user: PublicUser
+}
+
+struct ClubDraft: Encodable, Sendable {
+    var name: String
+    var description: String?
+    var bookId: String
+    var chapters: Int?
+}

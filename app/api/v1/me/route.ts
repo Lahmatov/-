@@ -1,3 +1,4 @@
+import { leaveAllClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { apiError, apiUserId, json, readJson, unauthorized, userJSON } from "@/lib/api";
 import { updateName } from "@/lib/social";
@@ -24,6 +25,7 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   const userId = await apiUserId(req);
   if (!userId) return unauthorized();
+  await leaveAllClubs(userId);
   await db.user.delete({ where: { id: userId } });
   return json({ ok: true });
 }

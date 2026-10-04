@@ -110,3 +110,19 @@ export const quotePatchSchema = z.object({
   note: optionalText(2000).optional(),
   isPublic: z.boolean().optional(),
 });
+
+export const clubSchema = z.object({
+  name: z.string().trim().min(1, "Введите название клуба").max(100, "Слишком длинное название"),
+  description: optionalText(1000),
+  bookId: z.string().min(1, "Выберите книгу"),
+  chapters: z.number().int().min(1).max(1000).nullish().transform((v) => v ?? null),
+});
+
+export const clubPatchSchema = clubSchema.partial();
+
+export const clubPostSchema = z.object({
+  text: z.string().trim().min(1, "Пустое сообщение").max(4000, "Слишком длинное сообщение"),
+  chapter: z.number().int().min(1).max(1000).nullish().transform((v) => v ?? null),
+});
+
+export const chapterSchema = z.object({ chapter: z.number().int().min(0).max(1000) });

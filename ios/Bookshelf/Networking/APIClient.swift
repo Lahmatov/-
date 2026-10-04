@@ -211,6 +211,68 @@ final class APIClient {
         let _: OK = try await send("DELETE", "comments/\(id)")
     }
 
+    // MARK: Клубы
+
+    private struct ClubsResponse: Decodable { let clubs: [ClubSummary] }
+    private struct ClubResponse: Decodable { let club: ClubDetails }
+    private struct ClubIdResponse: Decodable { struct Club: Decodable { let id: String }; let club: Club }
+    private struct ClubPostsResponse: Decodable { let posts: [ClubPost] }
+    private struct ClubPostResponse: Decodable { let post: ClubPost }
+    private struct ChapterResponse: Decodable { let chapter: Int }
+
+    func clubs() async throws -> [ClubSummary] {
+        let response: ClubsResponse = try await send("GET", "clubs")
+        return response.clubs
+    }
+
+    /// Возвращает id нового клуба.
+    func createClub(_ draft: ClubDraft) async throws -> String {
+        let response: ClubIdResponse = try await send("POST", "clubs", json: draft)
+        return response.club.id
+    }
+
+    /// Вступить по коду приглашения; возвращает id клуба.
+    func joinClub(code: String) async throws -> String {
+        let response: ClubIdResponse = try await send("POST", "clubs/join", json: ["code": code])
+        return response.club.id
+    }
+
+    func club(id: String) async throws -> ClubDetails {
+        let response: ClubResponse = try await send("GET", "clubs/\(id)")
+        return response.club
+    }
+
+    func leaveClub(id: String) async throws {
+        let _: OK = try await send("DELETE", "clubs/\(id)/membership")
+    }
+
+    func deleteClub(id: String) async throws {
+        let _: OK = try await send("DELETE", "clubs/\(id)")
+    }
+
+    func setClubChapter(_ chapter: Int, clubId: String) async throws -> Int {
+        let response: ChapterResponse = try await send("PUT", "clubs/\(clubId)/progress", json: ["chapter": chapter])
+        return response.chapter
+    }
+
+    func clubPosts(clubId: String) async throws -> [ClubPost] {
+        let response: ClubPostsResponse = try await send("GET", "clubs/\(clubId)/posts")
+        return response.posts
+    }
+
+    func addClubPost(_ text: String, chapter: Int?, clubId: String) async throws -> ClubPost {
+        struct Body: Encodable {
+            let text: String
+            let chapter: Int?
+        }
+        let response: ClubPostResponse = try await send("POST", "clubs/\(clubId)/posts", json: Body(text: text, chapter: chapter))
+        return response.post
+    }
+
+    func deleteClubPost(id: String) async throws {
+        let _: OK = try await send("DELETE", "club-posts/\(id)")
+    }
+
     // MARK: Цитаты
 
     private struct QuoteResponse: Decodable { let quote: Quote }

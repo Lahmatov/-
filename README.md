@@ -18,6 +18,8 @@
 - **Импорт**: Kindle (`My Clippings.txt`), экспорт Goodreads, любой CSV с колонками `Title, Author, Year, Status`.
 - **Цитаты**: сохраняйте места из книг (по умолчанию видны только вам), делитесь карточкой-картинкой;
   импорт Kindle переносит выделения и заметки.
+- **Книжные клубы**: группа читает одну книгу, вступают по коду приглашения; обсуждение по главам,
+  сообщения о главах, до которых участник не дочитал, скрыты.
 - **Экспорт** полки в CSV (`/export.csv`, открывается в Excel/Numbers, совместим с импортом).
 - **Друзья и лента**: подписки, лента «что читают те, на кого я подписан», публичные профили, свои списки книг.
 - **Обзор**: страницы авторов и жанров, топ по взвешенному рейтингу, «сейчас читают», рекомендации по вкусу.
@@ -124,6 +126,12 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
 | GET / POST | `/books/:id/quotes` | цитаты к книге `{mine, others}` / новая `{text, page?, note?, isPublic?}` |
 | GET | `/quotes?cursor=` | все мои цитаты |
 | PATCH / DELETE | `/quotes/:id` | правка / удаление своей цитаты |
+| GET / POST | `/clubs` | мои клубы / новый клуб `{name, description?, bookId, chapters?}` |
+| POST | `/clubs/join` | `{code}` — вступить по коду приглашения |
+| GET / PATCH / DELETE | `/clubs/:id` | клуб для участника / правка и удаление (владелец) |
+| DELETE | `/clubs/:id/membership` | выйти из клуба |
+| PUT | `/clubs/:id/progress` | `{chapter}` — до какой главы дочитал |
+| GET / POST | `/clubs/:id/posts` | обсуждение (спойлеры без текста) / `{text, chapter?}` |
 | POST | `/reports` | `{entryId \| commentId, reason}` — жалоба (`SPAM`, `ABUSE`, `SPOILER`, `OTHER`) |
 
 Полный список маршрутов — в `app/api/v1`. Заголовок `Accept-Language: en` переключает тексты ответов (жанры,

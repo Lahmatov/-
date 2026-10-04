@@ -62,6 +62,12 @@ struct FeedView: View {
             }
             .navigationTitle("Лента")
             .toolbar {
+                NavigationLink {
+                    ClubsView()
+                } label: {
+                    Image(systemName: "person.3")
+                }
+                .accessibilityLabel(Text("Книжные клубы"))
                 Button {
                     path.append(NotificationsRoute())
                 } label: {
