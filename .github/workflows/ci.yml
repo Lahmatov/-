@@ -13,8 +13,24 @@ jobs:
   web:
     name: Web — типы, тесты, сборка
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bookshelf
+          POSTGRES_PASSWORD: bookshelf
+          POSTGRES_DB: bookshelf
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bookshelf" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: file:./ci.db
+      DATABASE_URL: postgresql://bookshelf:bookshelf@localhost:5432/bookshelf
+      REDIS_URL: redis://localhost:6379
       AUTH_SECRET: ci-secret-not-for-production
       AUTH_TRUST_HOST: "true"
     steps:

@@ -5,9 +5,34 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: file:/data/bookshelf.db
+      DATABASE_URL: postgresql://bookshelf:${POSTGRES_PASSWORD:?Укажите POSTGRES_PASSWORD в .env}@db:5432/bookshelf
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # Порты базы и Redis наружу не открыты — к ним ходит только app.
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookshelf
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Укажите POSTGRES_PASSWORD в .env}
+      POSTGRES_DB: bookshelf
     volumes:
-      - data:/data
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookshelf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
 
   caddy:
     image: caddy:2
@@ -24,5 +49,5 @@ services:
       - app
 
 volumes:
-  data:
+  pgdata:
   caddy:

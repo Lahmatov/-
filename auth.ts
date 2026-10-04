@@ -31,14 +31,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) throw new CredentialsSignin();
         const keys = loginKeys(clientIp(request), parsed.data.email);
-        if (isLoginLimited(keys)) throw new TooManyAttempts();
+        if (await isLoginLimited(keys)) throw new TooManyAttempts();
         const user = await db.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
         const ok = !!user?.passwordHash && (await bcrypt.compare(parsed.data.password, user.passwordHash));
         if (!user || !ok) {
-          recordLoginFailure(keys);
+          await recordLoginFailure(keys);
           throw new CredentialsSignin();
         }
-        recordLoginSuccess(keys);
+        await recordLoginSuccess(keys);
         return { id: user.id, name: user.name, email: user.email, image: user.image };
       },
     }),

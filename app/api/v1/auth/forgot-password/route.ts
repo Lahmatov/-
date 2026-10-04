@@ -8,8 +8,8 @@ export async function POST(req: Request) {
   const parsed = z.object({ email: z.string().trim().toLowerCase().email() }).safeParse(await readJson(req));
   if (!parsed.success) return apiError("Некорректный email");
   const key = `reset:${clientIp(req)}`;
-  if (isRateLimited(key, 5)) return apiError("Слишком много запросов. Подождите 15 минут.", 429);
-  recordFailure(key);
+  if (await isRateLimited(key, 5)) return apiError("Слишком много запросов. Подождите 15 минут.", 429);
+  await recordFailure(key);
   // Не ждём отправки: время ответа не должно выдавать, зарегистрирован ли адрес.
   void requestPasswordReset(parsed.data.email).catch((e) => console.error("password reset email failed", e));
   return json({ ok: true });

@@ -10,8 +10,8 @@ export async function POST(req: Request) {
   if (!user?.email) return apiError("У аккаунта нет email");
   if (user.emailVerified) return json({ ok: true });
   const key = `verify:${user.email}`;
-  if (isRateLimited(key, 5)) return apiError("Слишком много запросов. Подождите 15 минут.", 429);
-  recordFailure(key);
+  if (await isRateLimited(key, 5)) return apiError("Слишком много запросов. Подождите 15 минут.", 429);
+  await recordFailure(key);
   try {
     await sendVerificationEmail(user.email);
   } catch (e) {

@@ -11,11 +11,11 @@ export async function POST(req: Request) {
   if (!parsed.success) return apiError("Введите код приглашения");
   // Ограничиваем перебор кодов.
   const key = `club-join:${userId}:${clientIp(req)}`;
-  if (isRateLimited(key, 20)) return apiError("Слишком много попыток. Подождите 15 минут.", 429);
+  if (await isRateLimited(key, 20)) return apiError("Слишком много попыток. Подождите 15 минут.", 429);
   const result = await joinClub(userId, parsed.data.code);
   if ("error" in result) {
     if (result.error === "NOT_FOUND") {
-      recordFailure(key);
+      await recordFailure(key);
       return apiError("Клуб с таким кодом не найден", 404);
     }
     return apiError("В клубе уже максимум участников", 409);

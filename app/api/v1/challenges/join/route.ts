@@ -10,10 +10,10 @@ export async function POST(req: Request) {
   const parsed = z.object({ code: z.string().trim().min(4).max(32) }).safeParse(await readJson(req));
   if (!parsed.success) return apiError("Введите код приглашения");
   const key = `challenge-join:${userId}:${clientIp(req)}`;
-  if (isRateLimited(key, 20)) return apiError("Слишком много попыток. Подождите 15 минут.", 429);
+  if (await isRateLimited(key, 20)) return apiError("Слишком много попыток. Подождите 15 минут.", 429);
   const challenge = await joinChallengeByCode(parsed.data.code, userId);
   if (!challenge) {
-    recordFailure(key);
+    await recordFailure(key);
     return apiError("Челлендж с таким кодом не найден", 404);
   }
   if (challenge === "FINISHED") return apiError("Челлендж уже закончился", 409);

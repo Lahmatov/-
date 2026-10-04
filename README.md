@@ -39,7 +39,8 @@
 ```bash
 npm install
 cp .env.example .env        # и впишите AUTH_SECRET (openssl rand -base64 32)
-npx prisma db push          # создаёт базу SQLite
+docker compose -f docker-compose.dev.yml up -d   # PostgreSQL и Redis на localhost
+npx prisma db push          # создаёт таблицы
 npm run db:seed             # ~150 книг для старта
 npm run dev                 # http://localhost:3000
 npm test                    # тесты поиска, импорта и ограничения попыток
@@ -60,8 +61,9 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
 
 ## Деплой
 
-Сервер собран в Docker-образ: SQLite хранится на томе `/data`, при старте схема базы обновляется сама,
-а в пустой каталог добавляются стартовые книги. Одного сервера с SQLite хватит на тысячи пользователей.
+Сервер собран в Docker-образ. Рядом в `docker-compose.yml` — PostgreSQL (данные на томе `pgdata`) и Redis
+(счётчики попыток входа, общие для всех экземпляров сервера). При старте схема базы обновляется сама,
+а в пустой каталог добавляются стартовые книги.
 
 ### Свой VPS (Hetzner, Timeweb, DigitalOcean — от ~5 €/мес)
 
@@ -70,25 +72,24 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
    ```bash
    curl -fsSL https://get.docker.com | sh
    git clone <этот репозиторий> bookshelf && cd bookshelf
-   cp .env.example .env    # впишите AUTH_SECRET, DOMAIN=books.example.com, ключи Google/Apple
+   cp .env.example .env    # впишите AUTH_SECRET, POSTGRES_PASSWORD, DOMAIN=books.example.com, ключи Google/Apple
    docker compose up -d
    ```
 3. Через минуту сайт откроется на `https://books.example.com` — сертификат HTTPS Caddy получает сам.
 4. В iOS-приложении укажите этот адрес в `ios/Config/Release.xcconfig` (`API_BASE_URL`).
 
 Обновление: `git pull && docker compose up -d --build`. Резервная копия базы:
-`docker compose cp app:/data/bookshelf.db ./backup.db`.
+`docker compose exec db pg_dump -U bookshelf bookshelf > backup.sql`.
 
 ### Railway / Render / Fly.io
 
-Подойдёт любой хостинг Docker-образов с постоянным диском: подключите репозиторий, смонтируйте диск в `/data`,
-задайте переменные из `.env.example`.
+Подойдёт любой хостинг Docker-образов: подключите репозиторий, добавьте управляемые PostgreSQL и Redis
+и задайте переменные из `.env.example` (`DATABASE_URL`, `REDIS_URL` и остальные).
 
 ### Vercel
 
-У Vercel нет постоянного диска, поэтому SQLite там не работает. Нужно поменять в `prisma/schema.prisma`
-`provider = "postgresql"` и взять базу в Neon или Supabase. Ещё ограничитель попыток входа хранит счётчики в памяти
-и на нескольких экземплярах сервера будет мягче.
+Возьмите PostgreSQL в Neon или Supabase и Redis в Upstash (подключение по `rediss://`), задайте `DATABASE_URL`
+и `REDIS_URL`.
 
 ## iOS-приложение
 
@@ -157,4 +158,3 @@ Next.js 15 (App Router, server actions) · Prisma · Auth.js v5 · Tailwind CSS 
 - Kindle: сейчас только через файл с устройства — у Amazon нет публичного API библиотеки.
 - Apple Books: публичного API и экспорта нет, поэтому прямой синхронизации не будет; остаётся импорт через CSV.
 - Веб-интерфейс пока только на русском (iOS-приложение — на русском и английском).
-- Ограничитель попыток хранит счётчики в памяти процесса — при нескольких серверах перенести в Redis.

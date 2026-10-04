@@ -2,10 +2,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// SQLite для локальной разработки. Для продакшена поменяйте provider на
-// "postgresql" и DATABASE_URL на строку подключения к Postgres.
+// PostgreSQL. Для разработки: `docker compose up -d db` (см. README).
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

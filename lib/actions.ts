@@ -350,8 +350,8 @@ export async function resendVerification() {
   const email = session?.user?.email;
   if (!email) return;
   const key = `verify:${email}`;
-  if (isRateLimited(key, 5)) return;
-  recordFailure(key);
+  if (await isRateLimited(key, 5)) return;
+  await recordFailure(key);
   await sendVerificationEmail(email).catch((e) => console.error("verification email failed", e));
 }
 
@@ -361,8 +361,8 @@ export async function forgotPassword(_: FormState, formData: FormData): Promise<
   });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   const key = `reset:${(await headers()).get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown"}`;
-  if (isRateLimited(key, 5)) return { error: "Слишком много запросов. Подождите 15 минут." };
-  recordFailure(key);
+  if (await isRateLimited(key, 5)) return { error: "Слишком много запросов. Подождите 15 минут." };
+  await recordFailure(key);
   // Не ждём отправки: время ответа не должно выдавать, зарегистрирован ли адрес.
   void requestPasswordReset(parsed.data.email).catch((e) => console.error("password reset email failed", e));
   return { message: "Если такой email зарегистрирован, мы отправили на него ссылку для сброса пароля." };
