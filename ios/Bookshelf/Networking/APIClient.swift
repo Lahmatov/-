@@ -211,6 +211,50 @@ final class APIClient {
         let _: OK = try await send("DELETE", "comments/\(id)")
     }
 
+    // MARK: Челленджи
+
+    private struct ChallengeResponse: Decodable { let challenge: ChallengeDetails }
+    private struct ChallengeIdResponse: Decodable { struct Item: Decodable { let id: String }; let challenge: Item }
+    private struct BadgesResponse: Decodable { let badges: [Badge] }
+
+    func challenges() async throws -> ChallengeList {
+        try await send("GET", "challenges")
+    }
+
+    func challenge(id: String) async throws -> ChallengeDetails {
+        let response: ChallengeResponse = try await send("GET", "challenges/\(id)")
+        return response.challenge
+    }
+
+    /// Возвращает id нового челленджа.
+    func createChallenge(_ draft: ChallengeDraft) async throws -> String {
+        let response: ChallengeIdResponse = try await send("POST", "challenges", json: draft)
+        return response.challenge.id
+    }
+
+    func joinChallenge(id: String) async throws {
+        let _: OK = try await send("PUT", "challenges/\(id)/membership")
+    }
+
+    /// Закрытый челлендж по коду; возвращает его id.
+    func joinChallenge(code: String) async throws -> String {
+        let response: ChallengeIdResponse = try await send("POST", "challenges/join", json: ["code": code])
+        return response.challenge.id
+    }
+
+    func leaveChallenge(id: String) async throws {
+        let _: OK = try await send("DELETE", "challenges/\(id)/membership")
+    }
+
+    func deleteChallenge(id: String) async throws {
+        let _: OK = try await send("DELETE", "challenges/\(id)")
+    }
+
+    func badges() async throws -> [Badge] {
+        let response: BadgesResponse = try await send("GET", "badges")
+        return response.badges
+    }
+
     // MARK: Клубы
 
     private struct ClubsResponse: Decodable { let clubs: [ClubSummary] }

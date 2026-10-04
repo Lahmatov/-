@@ -222,3 +222,24 @@ final class ClubTests: XCTestCase {
         XCTAssertEqual(post.chapter, 5)
     }
 }
+
+final class ChallengeTests: XCTestCase {
+    func testDecodesChallengeListAndProgress() throws {
+        let json = """
+        {"mine":[{"id":"c1","title":"Осень","description":null,"goal":4,"startsAt":"2026-09-01T00:00:00.000Z",
+                  "endsAt":"2026-11-30T23:59:59.999Z","genre":{"slug":"fantasy","name":"Фэнтези"},"isPublic":true,
+                  "isOwner":false,"participantCount":3,"phase":"active","myProgress":3}],
+         "open":[{"id":"c2","title":"Лето","description":"x","goal":10,"startsAt":"2026-06-01T00:00:00.000Z",
+                  "endsAt":"2026-08-31T23:59:59.999Z","genre":null,"isPublic":true,
+                  "isOwner":false,"participantCount":12,"phase":"upcoming","myProgress":null}]}
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { try DateCoding.decode($0) }
+        let list = try decoder.decode(ChallengeList.self, from: Data(json.utf8))
+        XCTAssertEqual(list.mine.first?.fraction, 0.75)
+        XCTAssertEqual(list.mine.first?.isCompleted, false)
+        XCTAssertEqual(list.mine.first?.genre?.slug, "fantasy")
+        XCTAssertNil(list.open.first?.myProgress)
+        XCTAssertEqual(list.open.first?.phase, .upcoming)
+    }
+}

@@ -41,6 +41,10 @@ struct AuthorRoute: Hashable {
     let name: String
 }
 
+struct ChallengeRoute: Hashable {
+    let id: String
+}
+
 struct ClubRoute: Hashable {
     let id: String
 }
@@ -60,6 +64,7 @@ extension View {
             .navigationDestination(for: GenreRoute.self) { GenreView(slug: $0.slug, name: $0.name) }
             .navigationDestination(for: NotificationsRoute.self) { _ in NotificationsView() }
             .navigationDestination(for: ClubRoute.self) { ClubDetailView(clubId: $0.id) }
+            .navigationDestination(for: ChallengeRoute.self) { ChallengeDetailView(challengeId: $0.id) }
     }
 }
 

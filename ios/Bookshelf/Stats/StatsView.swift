@@ -25,6 +25,7 @@ struct StatsView: View {
                 }
             }
             .navigationTitle("Итоги")
+            .appDestinations()
             .toolbar {
                 if let years = stats?.years, years.count > 1 {
                     Picker("Год", selection: $year) {
@@ -80,6 +81,11 @@ struct StatsView: View {
             }
 
             Section {
+                NavigationLink {
+                    ChallengesView()
+                } label: {
+                    Label("Челленджи", systemImage: "flag.checkered")
+                }
                 NavigationLink {
                     WrappedView(year: stats.year)
                 } label: {

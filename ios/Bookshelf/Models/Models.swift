@@ -532,3 +532,77 @@ struct ClubDraft: Encodable, Sendable {
     var bookId: String
     var chapters: Int?
 }
+
+// MARK: - Челленджи
+
+struct Challenge: Codable, Identifiable, Hashable, Sendable {
+    enum Phase: String, Codable, Sendable {
+        case upcoming, active, finished
+    }
+
+    let id: String
+    let title: String
+    let description: String?
+    let goal: Int
+    let startsAt: Date
+    let endsAt: Date
+    let genre: GenreRef?
+    let isPublic: Bool
+    let isOwner: Bool
+    let participantCount: Int
+    let phase: Phase
+    /// nil — я не участвую.
+    let myProgress: Int?
+
+    var fraction: Double { min(1, Double(myProgress ?? 0) / Double(max(goal, 1))) }
+    var isCompleted: Bool { (myProgress ?? 0) >= goal }
+}
+
+struct ChallengeList: Codable, Sendable {
+    let mine: [Challenge]
+    let open: [Challenge]
+}
+
+struct LeaderboardRow: Codable, Identifiable, Hashable, Sendable {
+    let user: PublicUser
+    let progress: Int
+    let completed: Bool
+    var id: String { user.id }
+}
+
+struct ChallengeDetails: Codable, Sendable {
+    let id: String
+    let title: String
+    let description: String?
+    let goal: Int
+    let startsAt: Date
+    let endsAt: Date
+    let genre: GenreRef?
+    let isPublic: Bool
+    let isOwner: Bool
+    let participantCount: Int
+    let phase: Challenge.Phase
+    let myProgress: Int?
+    let isMember: Bool
+    let inviteCode: String?
+    let leaderboard: [LeaderboardRow]
+}
+
+struct ChallengeDraft: Encodable, Sendable {
+    var title: String
+    var description: String?
+    var goal: Int
+    /// "YYYY-MM-DD"
+    var startsAt: String
+    var endsAt: String
+    var genre: String?
+    var isPublic: Bool
+}
+
+struct Badge: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String
+    let goal: Int
+    let endsAt: Date
+    let progress: Int
+}

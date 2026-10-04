@@ -22,25 +22,26 @@ model User {
   passwordChangedAt DateTime?
   createdAt         DateTime  @default(now())
 
-  accounts           Account[]
-  sessions           Session[]
-  apiTokens          ApiToken[]
-  goals              ReadingGoal[]
-  likes              ReviewLike[]
-  comments           ReviewComment[]
-  notifications      Notification[]  @relation("NotificationRecipient")
-  actedNotifications Notification[]  @relation("NotificationActor")
-  devices            DeviceToken[]
-  reports            Report[]
-  following          Follow[]        @relation("Follower")
-  followers          Follow[]        @relation("Following")
-  activities         Activity[]
-  lists              BookList[]
-  entries            ShelfEntry[]
-  quotes             Quote[]
-  booksAdded         Book[]          @relation("BookAddedBy")
-  clubMembers        ClubMember[]
-  clubPosts          ClubPost[]
+  accounts              Account[]
+  sessions              Session[]
+  apiTokens             ApiToken[]
+  goals                 ReadingGoal[]
+  likes                 ReviewLike[]
+  comments              ReviewComment[]
+  notifications         Notification[]         @relation("NotificationRecipient")
+  actedNotifications    Notification[]         @relation("NotificationActor")
+  devices               DeviceToken[]
+  reports               Report[]
+  following             Follow[]               @relation("Follower")
+  followers             Follow[]               @relation("Following")
+  activities            Activity[]
+  lists                 BookList[]
+  entries               ShelfEntry[]
+  quotes                Quote[]
+  booksAdded            Book[]                 @relation("BookAddedBy")
+  clubMembers           ClubMember[]
+  clubPosts             ClubPost[]
+  challengeParticipants ChallengeParticipant[]
 }
 
 model Account {
@@ -237,9 +238,10 @@ model BookListItem {
 
 // Справочник жанров (см. lib/genres.ts). Книге жанры ставятся из тем Open Library или читателями.
 model Genre {
-  slug  String      @id
-  name  String
-  books BookGenre[]
+  slug       String      @id
+  name       String
+  books      BookGenre[]
+  challenges Challenge[]
 }
 
 model BookGenre {
@@ -370,4 +372,39 @@ model ClubPost {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([clubId, createdAt])
+}
+
+/// Челлендж: «прочитать N книг с даты по дату» (можно в одном жанре). Прогресс считается по полке:
+/// книги со статусом «Прочитал» и датой окончания внутри периода. Выполнившие получают значок.
+model Challenge {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  goal        Int
+  startsAt    DateTime
+  endsAt      DateTime
+  genreSlug   String?
+  /// Публичные видны всем и открыты для вступления; закрытые — только по коду.
+  isPublic    Boolean  @default(true)
+  inviteCode  String   @unique
+  ownerId     String
+  createdAt   DateTime @default(now())
+
+  genre        Genre?                 @relation(fields: [genreSlug], references: [slug], onDelete: SetNull)
+  participants ChallengeParticipant[]
+
+  @@index([isPublic, endsAt])
+}
+
+model ChallengeParticipant {
+  id          String   @id @default(cuid())
+  challengeId String
+  userId      String
+  joinedAt    DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([userId])
 }

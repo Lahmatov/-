@@ -126,3 +126,28 @@ export const clubPostSchema = z.object({
 });
 
 export const chapterSchema = z.object({ chapter: z.number().int().min(0).max(1000) });
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Даты — дни "YYYY-MM-DD" (UTC); конец периода включительно до конца дня. */
+export const challengeSchema = z
+  .object({
+    title: z.string().trim().min(1, "Введите название").max(100, "Слишком длинное название"),
+    description: optionalText(1000),
+    goal: z.number().int().min(1, "Цель — хотя бы одна книга").max(1000, "Слишком большая цель"),
+    startsAt: z.string().date("Некорректная дата начала"),
+    endsAt: z.string().date("Некорректная дата окончания"),
+    genre: z.string().trim().min(1).max(64).nullish().transform((v) => v ?? null),
+    isPublic: z.boolean().default(true),
+  })
+  .transform((v) => ({
+    title: v.title,
+    description: v.description,
+    goal: v.goal,
+    startsAt: new Date(`${v.startsAt}T00:00:00.000Z`),
+    endsAt: new Date(`${v.endsAt}T23:59:59.999Z`),
+    genreSlug: v.genre,
+    isPublic: v.isPublic,
+  }))
+  .refine((v) => v.endsAt > v.startsAt, "Окончание должно быть позже начала")
+  .refine((v) => v.endsAt.getTime() - v.startsAt.getTime() <= 2 * 366 * DAY_MS, "Челлендж — не дольше двух лет");

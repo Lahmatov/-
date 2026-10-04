@@ -1,6 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Book, ShelfEntry, User } from "@prisma/client";
 import { db } from "./db";
+import { phaseOf } from "./challenges";
+import { genreName } from "./genres";
+import type { Lang } from "./i18n";
 
 // ---------- Ответы ----------
 
@@ -167,4 +170,35 @@ export const clubPostJSON = (p: {
   spoiler: p.spoiler ?? false,
   createdAt: p.createdAt,
   user: publicUserJSON(p.user),
+});
+
+export const challengeJSON = (
+  c: {
+    id: string;
+    title: string;
+    description: string | null;
+    goal: number;
+    startsAt: Date;
+    endsAt: Date;
+    genreSlug: string | null;
+    isPublic: boolean;
+    ownerId: string;
+    _count?: { participants: number };
+    myProgress?: number | null;
+  },
+  viewerId: string,
+  lang: Lang = "ru",
+) => ({
+  id: c.id,
+  title: c.title,
+  description: c.description,
+  goal: c.goal,
+  startsAt: c.startsAt,
+  endsAt: c.endsAt,
+  genre: c.genreSlug ? { slug: c.genreSlug, name: genreName(c.genreSlug, lang) } : null,
+  isPublic: c.isPublic,
+  isOwner: c.ownerId === viewerId,
+  participantCount: c._count?.participants ?? 0,
+  phase: phaseOf(c),
+  myProgress: c.myProgress ?? null,
 });

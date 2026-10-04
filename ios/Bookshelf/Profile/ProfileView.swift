@@ -46,6 +46,8 @@ struct ProfileView: View {
                     }
                 }
 
+                BadgesSection()
+
                 Section {
                     NavigationLink {
                         MyListsView()
