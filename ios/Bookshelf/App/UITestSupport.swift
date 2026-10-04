@@ -78,7 +78,7 @@ final class UITestStub: URLProtocol {
     private static let date = "2026-10-01T10:00:00.000Z"
     private static let user = #"{"id":"u1","name":"Аня","email":"anya@example.com","emailVerified":true}"#
     private static let book = #"{"id":"b1","title":"Мастер и Маргарита","author":"Михаил Булгаков","year":1967,"isbn":null,"coverUrl":null,"pageCount":480}"#
-    private static let entry = #"{"status":"READING","startedAt":"2026-09-20","finishedAt":null,"rating":null,"review":null,"isPublic":true,"currentPage":120,"totalPages":null,"updatedAt":"\#(date)"}"#
+    private static let entry = #"{"status":"READING","startedAt":"2026-09-20T00:00:00.000Z","finishedAt":null,"rating":null,"review":null,"isPublic":true,"currentPage":120,"totalPages":null,"updatedAt":"\#(date)"}"#
 
     private static func quote(id: String, text: String, page: Int?) -> String {
         let pageJSON = page.map(String.init) ?? "null"
