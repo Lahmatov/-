@@ -59,8 +59,8 @@ targets:
       path: Bookshelf/Bookshelf.entitlements
       properties:
         com.apple.developer.applesignin: [Default]
-        # Push-уведомления (APNs). Для Release-сборки в App Store поменяйте на production.
-        aps-environment: development
+        # Push-уведомления (APNs): development в Debug, production в Release (Config/*.xcconfig).
+        aps-environment: $(APS_ENVIRONMENT)
         # Общий контейнер с виджетом
         com.apple.security.application-groups: [$(APP_GROUP_ID)]
     dependencies:

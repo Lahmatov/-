@@ -71,6 +71,30 @@ GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.1234-abc
 - Удаление аккаунта из приложения обязательно (правило 5.1.1(v)). Оно в «Профиле».
 - Нужна ссылка на политику конфиденциальности.
 
+## TestFlight
+
+Сборку в TestFlight делает GitHub Actions (`.github/workflows/testflight.yml`): вручную
+(Actions → TestFlight → Run workflow) или тегом `v*` (`git tag v0.2.0 && git push --tags`). Номер сборки — номер
+запуска workflow. Подпись автоматическая: Xcode сам создаёт сертификаты и профили через ключ App Store Connect API,
+хранить сертификаты в репозитории не нужно.
+
+Один раз:
+1. Нужен платный аккаунт Apple Developer. В [App Store Connect](https://appstoreconnect.apple.com) → Apps → «+»
+   создайте приложение со своим Bundle ID (например, `com.yourname.bookshelf`).
+2. Users and Access → Integrations → App Store Connect API → «+», роль **Admin** (нужна для создания
+   сертификатов). Скачайте `.p8` (его дают один раз), запишите Key ID и Issuer ID.
+3. В репозитории на GitHub: Settings → Secrets and variables → Actions → New repository secret:
+   - `ASC_KEY_ID`, `ASC_ISSUER_ID` — из шага 2; `ASC_KEY_P8` — содержимое файла `.p8` целиком;
+   - `APPLE_TEAM_ID` — Team ID (developer.apple.com → Membership);
+   - `APP_BUNDLE_ID` — Bundle ID из шага 1;
+   - `API_BASE_URL` — адрес вашего сервера, только `https://`;
+   - `GOOGLE_CLIENT_ID` — необязательно, iOS Client ID для входа через Google.
+4. На сервере для сборок из TestFlight включите боевые push-уведомления: `APNS_PRODUCTION=true`
+   (Debug-сборки из Xcode используют sandbox — `APS_ENVIRONMENT` в `Config/*.xcconfig`).
+
+Первая загрузка иногда требует принять соглашения в App Store Connect и заполнить экспортное соответствие —
+сборка подождёт в разделе TestFlight.
+
 ## Тесты
 
 `xcodebuild test` (или ⌘U) запускает юнит-тесты (`BookshelfTests`) и UI-тесты (`BookshelfUITests`).

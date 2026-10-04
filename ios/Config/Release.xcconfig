@@ -1,5 +1,6 @@
 #include "Shared.xcconfig"
 
 API_BASE_URL = https:/$()/bookshelf.example.com
+APS_ENVIRONMENT = production
 
 #include? "Local.xcconfig"

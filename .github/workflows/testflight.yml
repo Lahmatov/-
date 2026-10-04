@@ -1,0 +1,99 @@
+name: TestFlight
+
+# Сборка iOS-приложения и загрузка в TestFlight. Запуск вручную (Actions → TestFlight → Run workflow)
+# или пушем тега v* (например, v0.2.0). Настройка секретов — ios/README.md, раздел «TestFlight».
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Сборка и загрузка в TestFlight
+    runs-on: macos-15
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+    steps:
+      - name: Проверка секретов
+        run: |
+          missing=""
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID APP_BUNDLE_ID API_BASE_URL; do
+            [ -z "${!name}" ] && missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Не заданы секреты:$missing — Settings → Secrets and variables → Actions (см. ios/README.md)"
+            exit 1
+          fi
+          case "$API_BASE_URL" in
+            https://*) ;;
+            *) echo "::error::API_BASE_URL должен начинаться с https://"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+
+      - name: Настройки сборки
+        working-directory: ios
+        run: |
+          host="${API_BASE_URL#https://}"
+          host="${host%/}"
+          reversed="com.googleusercontent.apps.placeholder"
+          if [ -n "$GOOGLE_CLIENT_ID" ]; then
+            reversed="com.googleusercontent.apps.${GOOGLE_CLIENT_ID%.apps.googleusercontent.com}"
+          fi
+          # В xcconfig «//» — комментарий, поэтому слэши разделены $().
+          cat > Config/Local.xcconfig <<CONFIG
+          APP_BUNDLE_ID = $APP_BUNDLE_ID
+          DEVELOPMENT_TEAM = $APPLE_TEAM_ID
+          API_BASE_URL = https:/\$()/$host
+          GOOGLE_CLIENT_ID = $GOOGLE_CLIENT_ID
+          GOOGLE_REVERSED_CLIENT_ID = $reversed
+          CONFIG
+          sed -i '' 's/^ *//' Config/Local.xcconfig
+          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          /usr/libexec/PlistBuddy -c "Add :teamID string $APPLE_TEAM_ID" ExportOptions.plist
+          xcodegen
+
+      - name: Архив
+        working-directory: ios
+        run: |
+          xcodebuild archive \
+            -project Bookshelf.xcodeproj \
+            -scheme Bookshelf \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Bookshelf.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            -quiet
+
+      - name: Загрузка в TestFlight
+        working-directory: ios
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Bookshelf.xcarchive" \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          echo "Сборка ${{ github.run_number }} загружена. Через 10–30 минут она появится в App Store Connect → TestFlight."
+
+      - name: Удалить ключ
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
