@@ -1,0 +1,8 @@
+#include "Shared.xcconfig"
+
+// В xcconfig «//» начинает комментарий, поэтому слэши разделены $().
+// Симулятор видит сервер на Mac как localhost. Для iPhone укажите IP Mac в локальной сети.
+API_BASE_URL = http:/$()/localhost:3000
+APS_ENVIRONMENT = development
+
+#include? "Local.xcconfig"

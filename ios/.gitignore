@@ -1,0 +1,8 @@
+*.xcodeproj
+xcuserdata/
+DerivedData/
+Config/Local.xcconfig
+Bookshelf/Info.plist
+Bookshelf/Bookshelf.entitlements
+BookshelfWidget/Info.plist
+BookshelfWidget/BookshelfWidget.entitlements
