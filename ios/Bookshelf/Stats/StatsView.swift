@@ -86,6 +86,7 @@ struct StatsView: View {
                 } label: {
                     Label("Челленджи", systemImage: "flag.checkered")
                 }
+                .accessibilityIdentifier("challengesLink")
                 NavigationLink {
                     WrappedView(year: stats.year)
                 } label: {

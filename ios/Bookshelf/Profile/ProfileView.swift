@@ -59,6 +59,7 @@ struct ProfileView: View {
                     } label: {
                         Label("Книжные клубы", systemImage: "person.3")
                     }
+                    .accessibilityIdentifier("clubsLink")
                     NavigationLink {
                         MyQuotesView()
                     } label: {

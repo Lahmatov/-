@@ -6,7 +6,14 @@ import GoogleSignIn
 @main
 struct BookshelfApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var auth = AuthStore(api: APIClient(baseURL: AppConfig.apiBaseURL, offline: .makeDefault()))
+    @State private var auth = BookshelfApp.makeAuthStore()
+
+    private static func makeAuthStore() -> AuthStore {
+        #if DEBUG
+        if UITestSupport.isActive { return UITestSupport.makeAuthStore() }
+        #endif
+        return AuthStore(api: APIClient(baseURL: AppConfig.apiBaseURL, offline: .makeDefault()))
+    }
 
     init() {
         CoverCache.configure()
@@ -80,7 +87,13 @@ struct RootView: View {
                 SignInView()
             case .signedIn:
                 MainTabView()
-                    .task { await PushManager.shared.enable(api: auth.api) }
+                    .task {
+                        #if DEBUG
+                        // В UI-тестах системный запрос разрешения на уведомления перекрыл бы экран.
+                        if UITestSupport.isActive { return }
+                        #endif
+                        await PushManager.shared.enable(api: auth.api)
+                    }
             }
         }
         .task { await auth.restore() }
@@ -135,6 +148,7 @@ struct OfflineBanner: View {
                 .padding(.vertical, 6)
                 .background(.orange.opacity(0.2))
                 .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("offlineBanner")
             }
         }
         .animation(.default, value: sync.isOffline)

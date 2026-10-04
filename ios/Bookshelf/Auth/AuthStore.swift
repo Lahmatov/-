@@ -18,9 +18,13 @@ final class AuthStore {
     private static let tokenKey = "apiToken"
     private static let userKey = "currentUser"
 
-    init(api: APIClient) {
+    convenience init(api: APIClient) {
+        self.init(api: api, token: Keychain.read(Self.tokenKey))
+    }
+
+    init(api: APIClient, token: String?) {
         self.api = api
-        api.token = Keychain.read(Self.tokenKey)
+        api.token = token
         api.onUnauthorized = { [weak self] in self?.clearSession() }
     }
 

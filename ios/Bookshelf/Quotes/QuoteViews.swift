@@ -31,6 +31,7 @@ struct QuotesSection: View {
                 }
             }
             Button("Добавить цитату", systemImage: "plus") { editing = .new }
+                .accessibilityIdentifier("addQuote")
         } header: {
             Text("Цитаты")
         }
@@ -154,6 +155,7 @@ struct QuoteEditor: View {
                 Section("Цитата") {
                     TextEditor(text: $text)
                         .frame(minHeight: 140)
+                        .accessibilityIdentifier("quoteText")
                 }
                 Section {
                     TextField("Страница", text: $page)
@@ -176,6 +178,7 @@ struct QuoteEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Сохранить") { Task { await save() } }
                         .disabled(trimmed.isEmpty || isSaving)
+                        .accessibilityIdentifier("saveQuote")
                 }
             }
             .errorAlert($errorMessage)
