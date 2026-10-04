@@ -220,15 +220,41 @@ struct BookDetailView: View {
         do {
             _ = try await auth.api.setStatus(status, bookId: bookId)
             await load()
+        } catch APIError.queued {
+            // Без сети: показываем новый статус сразу, на сервер он уйдёт из очереди.
+            applyOffline(status: status)
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func applyOffline(status: ReadingStatus?) {
+        guard let details else { return }
+        let old = details.myEntry
+        let entry = status.map {
+            ShelfEntry(
+                status: $0,
+                startedAt: old?.startedAt ?? ($0 == .reading ? Date() : nil),
+                finishedAt: $0 == .read ? Date() : old?.finishedAt,
+                rating: old?.rating,
+                review: old?.review,
+                isPublic: old?.isPublic ?? true,
+                currentPage: old?.currentPage,
+                totalPages: old?.totalPages,
+                updatedAt: Date()
+            )
+        }
+        let updated = BookDetails(book: details.book, myEntry: entry, stats: details.stats, reviews: details.reviews, genres: details.genres)
+        self.details = updated
+        auth.api.updateCachedResponse(updated, path: "books/\(bookId)")
     }
 
     private func removeFromShelf() async {
         do {
             try await auth.api.removeFromShelf(bookId: bookId)
             await load()
+        } catch APIError.queued {
+            applyOffline(status: nil)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -347,6 +373,8 @@ private struct ReviewEditor: View {
             _ = try await auth.api.saveReview(update, bookId: bookId)
             savedCount += 1
             await onSaved()
+        } catch APIError.queued {
+            savedCount += 1 // сохранено на телефоне, отправится при появлении сети
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -417,6 +445,8 @@ private struct ProgressEditor: View {
             let entry = try await auth.api.setProgress(currentPage: page, totalPages: pages, bookId: bookId)
             savedProgress = entry.progress(pageCount: pageCount)
             await onSaved()
+        } catch APIError.queued {
+            if let page, let total = pages ?? pageCount, total > 0 { savedProgress = min(1, Double(page) / Double(total)) }
         } catch {
             errorMessage = error.localizedDescription
         }

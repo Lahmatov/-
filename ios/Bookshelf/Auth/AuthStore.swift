@@ -99,6 +99,9 @@ final class AuthStore {
         api.token = nil
         Keychain.delete(Self.tokenKey)
         UserDefaults.standard.removeObject(forKey: Self.userKey)
+        api.offline?.clear()
+        api.sync.pendingCount = 0
+        api.sync.isOffline = false
         #if canImport(WidgetKit)
         WidgetSync.clear()
         #endif

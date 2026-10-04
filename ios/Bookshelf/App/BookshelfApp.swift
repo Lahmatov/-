@@ -6,7 +6,11 @@ import GoogleSignIn
 @main
 struct BookshelfApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var auth = AuthStore(api: APIClient(baseURL: AppConfig.apiBaseURL))
+    @State private var auth = AuthStore(api: APIClient(baseURL: AppConfig.apiBaseURL, offline: .makeDefault()))
+
+    init() {
+        CoverCache.configure()
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -74,6 +78,9 @@ struct RootView: View {
 }
 
 struct MainTabView: View {
+    @Environment(AuthStore.self) private var auth
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         TabView {
             ShelfView()
@@ -87,5 +94,45 @@ struct MainTabView: View {
             ProfileView()
                 .tabItem { Label("Профиль", systemImage: "person.crop.circle") }
         }
+        .safeAreaInset(edge: .top, spacing: 0) { OfflineBanner(sync: auth.api.sync) }
+        // Неотправленные изменения уходят, когда появилась сеть или пользователь вернулся в приложение.
+        .task { await NetworkMonitor.shared.start { Task { await auth.api.flushOutbox() } } }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await auth.api.flushOutbox() } }
+        }
+    }
+}
+
+/// Полоска «нет сети / ждут отправки» над вкладками.
+struct OfflineBanner: View {
+    let sync: SyncStatus
+    @State private var rejected: String?
+
+    var body: some View {
+        Group {
+            if sync.isOffline || sync.pendingCount > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: sync.isOffline ? "wifi.slash" : "arrow.triangle.2.circlepath")
+                    if sync.isOffline {
+                        Text("Нет сети — показаны сохранённые данные")
+                    }
+                    if sync.pendingCount > 0 {
+                        Text(L("Ждут отправки: %@", String(sync.pendingCount)))
+                    }
+                }
+                .font(.footnote)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .background(.orange.opacity(0.2))
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .animation(.default, value: sync.isOffline)
+        .onChange(of: sync.lastRejected) { _, message in
+            guard let message else { return }
+            rejected = message
+            sync.lastRejected = nil
+        }
+        .errorAlert($rejected, title: "Изменение не сохранилось")
     }
 }

@@ -258,3 +258,10 @@
 "Цитат пока нет" = "No quotes yet";
 "Добавляйте их на странице книги или импортируйте выделения из Kindle в профиле." = "Add them on a book page or import your Kindle highlights from your profile.";
 "Новых цитат: %@" = "New quotes: %@";
+
+/* Офлайн */
+"Нет подключения к интернету." = "No internet connection.";
+"Нет сети — изменение сохранено на телефоне и отправится, когда появится интернет." = "You're offline — the change is saved on your phone and will be sent when you're back online.";
+"Нет сети — показаны сохранённые данные" = "Offline — showing saved data";
+"Ждут отправки: %@" = "Waiting to sync: %@";
+"Изменение не сохранилось" = "Change not saved";

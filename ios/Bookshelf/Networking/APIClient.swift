@@ -7,12 +7,18 @@ enum APIError: LocalizedError, Equatable {
     case unauthorized
     case server(String)
     case invalidResponse
+    /// Нет сети и нет сохранённой копии ответа.
+    case offline
+    /// Нет сети: изменение сохранено на телефоне и уйдёт на сервер позже.
+    case queued
 
     var errorDescription: String? {
         switch self {
         case .unauthorized: L("Сессия истекла — войдите снова.")
         case .server(let message): message
         case .invalidResponse: L("Сервер вернул непонятный ответ.")
+        case .offline: L("Нет подключения к интернету.")
+        case .queued: L("Нет сети — изменение сохранено на телефоне и отправится, когда появится интернет.")
         }
     }
 }
@@ -25,6 +31,11 @@ final class APIClient {
     /// Вызывается, когда сервер ответил 401 на запрос с токеном (токен отозван или аккаунт удалён).
     var onUnauthorized: (() -> Void)?
 
+    /// Офлайн-копии ответов и очередь изменений; nil — без офлайн-режима (например, в тестах).
+    let offline: OfflineStore?
+    let sync = SyncStatus()
+    private var isFlushing = false
+
     private let session: URLSession
     private let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
@@ -35,9 +46,11 @@ final class APIClient {
 
     private struct ErrorBody: Decodable { let error: String }
 
-    init(baseURL: URL, session: URLSession = .shared) {
+    init(baseURL: URL, session: URLSession = .shared, offline: OfflineStore? = nil) {
         self.baseURL = baseURL
         self.session = session
+        self.offline = offline
+        sync.pendingCount = offline?.pending.count ?? 0
     }
 
     // MARK: - Авторизация
@@ -108,17 +121,17 @@ final class APIClient {
     }
 
     func setStatus(_ status: ReadingStatus, bookId: String) async throws -> ShelfEntry {
-        let response: EntryResponse = try await send("PUT", "shelf/\(bookId)", json: ["status": status.rawValue])
+        let response: EntryResponse = try await sendQueueable("PUT", "shelf/\(bookId)", json: ["status": status.rawValue])
         return response.entry
     }
 
     func saveReview(_ update: ReviewUpdate, bookId: String) async throws -> ShelfEntry {
-        let response: EntryResponse = try await send("PATCH", "shelf/\(bookId)", json: update)
+        let response: EntryResponse = try await sendQueueable("PATCH", "shelf/\(bookId)", json: update)
         return response.entry
     }
 
     func removeFromShelf(bookId: String) async throws {
-        let _: OK = try await send("DELETE", "shelf/\(bookId)")
+        let _: OK = try await sendQueueable("DELETE", "shelf/\(bookId)")
     }
 
     func book(isbn: String) async throws -> Book {
@@ -171,7 +184,7 @@ final class APIClient {
             }
             enum CodingKeys: String, CodingKey { case currentPage, totalPages }
         }
-        let response: EntryResponse = try await send(
+        let response: EntryResponse = try await sendQueueable(
             "PUT", "shelf/\(bookId)/progress", json: Body(currentPage: currentPage, totalPages: totalPages)
         )
         return response.entry
@@ -207,17 +220,17 @@ final class APIClient {
     }
 
     func addQuote(_ draft: QuoteDraft, bookId: String) async throws -> Quote {
-        let response: QuoteResponse = try await send("POST", "books/\(bookId)/quotes", json: draft)
+        let response: QuoteResponse = try await sendQueueable("POST", "books/\(bookId)/quotes", json: draft)
         return response.quote
     }
 
     func updateQuote(id: String, _ draft: QuoteDraft) async throws -> Quote {
-        let response: QuoteResponse = try await send("PATCH", "quotes/\(id)", json: draft)
+        let response: QuoteResponse = try await sendQueueable("PATCH", "quotes/\(id)", json: draft)
         return response.quote
     }
 
     func deleteQuote(id: String) async throws {
-        let _: OK = try await send("DELETE", "quotes/\(id)")
+        let _: OK = try await sendQueueable("DELETE", "quotes/\(id)")
     }
 
     func myQuotes(cursor: String? = nil) async throws -> QuotePage {
@@ -355,15 +368,11 @@ final class APIClient {
 
     /// Своя полка в CSV (формат совместим с импортом).
     func exportCSV() async throws -> Data {
-        let request = makeRequest("GET", "export")
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        if http.statusCode == 401 {
-            onUnauthorized?()
-            throw APIError.unauthorized
+        do {
+            return try await fetch(makeRequest("GET", "export"))
+        } catch let error where Self.isConnectivityError(error) {
+            throw APIError.offline
         }
-        guard (200..<300).contains(http.statusCode) else { throw APIError.server(L("Ошибка сервера (%@)", String(http.statusCode))) }
-        return data
     }
 
     // MARK: - Импорт
@@ -416,25 +425,131 @@ final class APIClient {
         query: [URLQueryItem] = [],
         json body: (any Encodable)? = nil
     ) async throws -> T {
+        try await perform(try makeRequest(method, path, query: query, body: body))
+    }
+
+    private func makeRequest(_ method: String, _ path: String, query: [URLQueryItem] = [], body: (any Encodable)?) throws -> URLRequest {
         var request = makeRequest(method, path, query: query)
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try encoder.encode(body)
         }
-        return try await perform(request)
+        return request
     }
 
-    private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+    /// Изменение, которое можно сделать без сети: при обрыве связи оно встаёт в очередь (APIError.queued)
+    /// и уйдёт на сервер, когда связь вернётся. Порядок изменений сохраняется.
+    private func sendQueueable<T: Decodable>(
+        _ method: String,
+        _ path: String,
+        json body: (any Encodable)? = nil
+    ) async throws -> T {
+        let request = try makeRequest(method, path, body: body)
+        guard let offline else { return try await perform(request) }
+        // Сначала отправляем то, что накопилось, иначе новое изменение обгонит старые.
+        if !offline.pending.isEmpty { await flushOutbox() }
+        if !offline.pending.isEmpty {
+            enqueue(request, path: path)
+            throw APIError.queued
+        }
+        do {
+            return try await perform(request)
+        } catch APIError.offline {
+            enqueue(request, path: path)
+            throw APIError.queued
+        }
+    }
 
-        if (200..<300).contains(http.statusCode) {
+    private func enqueue(_ request: URLRequest, path: String) {
+        guard let offline else { return }
+        offline.enqueue(method: request.httpMethod ?? "GET", path: path, body: request.httpBody)
+        sync.pendingCount = offline.pending.count
+    }
+
+    /// Отправляет очередь изменений по порядку. Вызывается при появлении сети и при возврате в приложение.
+    func flushOutbox() async {
+        guard let offline, !isFlushing, token != nil, !offline.pending.isEmpty else { return }
+        isFlushing = true
+        defer {
+            isFlushing = false
+            sync.pendingCount = offline.pending.count
+        }
+        for item in offline.pending {
+            var request = makeRequest(item.method, item.path)
+            if let body = item.body {
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.httpBody = body
+            }
             do {
-                return try decoder.decode(T.self, from: data)
+                _ = try await fetch(request)
+                offline.remove(id: item.id)
+                sync.isOffline = false
+            } catch let error where Self.isConnectivityError(error) {
+                sync.isOffline = true
+                return
+            } catch APIError.unauthorized {
+                return
             } catch {
-                throw APIError.invalidResponse
+                // Сервер отклонил изменение (например, книгу удалили) — повтор не поможет.
+                offline.remove(id: item.id)
+                sync.lastRejected = error.localizedDescription
             }
         }
+    }
+
+    /// Сохраняет значение как офлайн-копию ответа GET (например, после изменения, поставленного в очередь).
+    func updateCachedResponse<T: Encodable>(_ value: T, path: String, query: [URLQueryItem] = []) {
+        guard let offline else { return }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let data = try? encoder.encode(value) else { return }
+        offline.saveResponse(data, for: cacheKey(makeRequest("GET", path, query: query)))
+    }
+
+    private func cacheKey(_ request: URLRequest) -> String {
+        "\(request.url?.absoluteString ?? "")|\(request.value(forHTTPHeaderField: "Accept-Language") ?? "")"
+    }
+
+    static func isConnectivityError(_ error: Error) -> Bool {
+        guard let error = error as? URLError else { return false }
+        let codes: [URLError.Code] = [
+            .notConnectedToInternet, .networkConnectionLost, .timedOut, .cannotConnectToHost,
+            .cannotFindHost, .dnsLookupFailed, .dataNotAllowed, .internationalRoamingOff,
+        ]
+        return codes.contains(error.code)
+    }
+
+    /// GET без сети отдаёт последнюю сохранённую копию ответа; остальные запросы — APIError.offline.
+    private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
+        let isGet = request.httpMethod == "GET"
+        let data: Data
+        do {
+            data = try await fetch(request)
+        } catch let error where Self.isConnectivityError(error) {
+            sync.isOffline = true
+            if isGet, let cached = offline?.response(for: cacheKey(request)) { return try decodeBody(cached) }
+            throw APIError.offline
+        }
+        if sync.isOffline { sync.isOffline = false }
+        let value: T = try decodeBody(data)
+        if isGet { offline?.saveResponse(data, for: cacheKey(request)) }
+        if let offline, !offline.pending.isEmpty, !isFlushing { Task { await flushOutbox() } }
+        return value
+    }
+
+    private func decodeBody<T: Decodable>(_ data: Data) throws -> T {
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw APIError.invalidResponse
+        }
+    }
+
+    /// Запрос без кэша: тело успешного ответа или ошибка сервера.
+    private func fetch(_ request: URLRequest) async throws -> Data {
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        if (200..<300).contains(http.statusCode) { return data }
 
         let message = (try? decoder.decode(ErrorBody.self, from: data))?.error
         if http.statusCode == 401, request.value(forHTTPHeaderField: "Authorization") != nil {

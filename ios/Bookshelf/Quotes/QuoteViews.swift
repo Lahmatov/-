@@ -58,6 +58,10 @@ struct QuotesSection: View {
         do {
             try await auth.api.deleteQuote(id: quote.id)
             await load()
+        } catch APIError.queued {
+            if let current = quotes {
+                quotes = BookQuotes(mine: current.mine.filter { $0.id != quote.id }, others: current.others)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -196,6 +200,8 @@ struct QuoteEditor: View {
             }
             await onSaved()
             dismiss()
+        } catch APIError.queued {
+            dismiss() // без сети: цитата уйдёт на сервер из очереди
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -292,6 +298,8 @@ struct MyQuotesView: View {
     private func delete(_ quote: Quote) async {
         do {
             try await auth.api.deleteQuote(id: quote.id)
+            quotes.removeAll { $0.id == quote.id }
+        } catch APIError.queued {
             quotes.removeAll { $0.id == quote.id }
         } catch {
             errorMessage = error.localizedDescription

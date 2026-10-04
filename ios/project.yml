@@ -15,6 +15,10 @@ packages:
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS
     from: 8.0.0
+  # Загрузка и дисковый кэш обложек — видны и без сети.
+  Nuke:
+    url: https://github.com/kean/Nuke
+    from: 12.8.0
 
 targets:
   Bookshelf:
@@ -62,6 +66,10 @@ targets:
     dependencies:
       - package: GoogleSignIn
         product: GoogleSignIn
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
       - target: BookshelfWidget
 
   BookshelfWidget:

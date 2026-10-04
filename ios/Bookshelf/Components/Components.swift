@@ -1,4 +1,17 @@
 import SwiftUI
+#if canImport(NukeUI)
+import Nuke
+import NukeUI
+#endif
+
+enum CoverCache {
+    /// Обложки кэшируются на диске (Nuke), поэтому полка с картинками открывается и без сети.
+    static func configure() {
+        #if canImport(NukeUI)
+        ImagePipeline.shared = ImagePipeline(configuration: .withDataCache)
+        #endif
+    }
+}
 
 struct BookCoverView: View {
     let url: URL?
@@ -6,23 +19,42 @@ struct BookCoverView: View {
     var width: CGFloat = 48
 
     var body: some View {
+        cover
+        .frame(width: width, height: width * 1.5)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var cover: some View {
+        #if canImport(NukeUI)
+        LazyImage(url: url) { state in
+            if let image = state.image {
+                image.resizable().scaledToFill()
+            } else {
+                placeholder
+            }
+        }
+        #else
         AsyncImage(url: url) { phase in
             if let image = phase.image {
                 image.resizable().scaledToFill()
             } else {
-                ZStack {
-                    Color.secondary.opacity(0.15)
-                    Text(title)
-                        .font(.system(size: max(7, width / 7)))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(3)
-                }
+                placeholder
             }
         }
-        .frame(width: width, height: width * 1.5)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .accessibilityHidden(true)
+        #endif
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            Color.secondary.opacity(0.15)
+            Text(title)
+                .font(.system(size: max(7, width / 7)))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(3)
+        }
     }
 }
 
