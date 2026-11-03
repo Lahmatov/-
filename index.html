@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#24112b">
+<title>Квест для Карины</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,500&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#24112b; --bg2:#4a1d3f; --card:rgba(255,255,255,.07); --line:rgba(255,255,255,.14);
+    --text:#fff6f0; --muted:#e6cfd6; --gold:#f6c96b; --pink:#ff7aa2; --ok:#5fd39a; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:Nunito,system-ui,-apple-system,sans-serif;color:var(--text);
+    background:radial-gradient(120% 80% at 50% 0%,var(--bg2) 0%,var(--bg1) 60%) fixed,var(--bg1);
+    min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+  header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;max-width:560px;margin:0 auto}
+  .brand{font-family:"Playfair Display",serif;font-weight:800;letter-spacing:.5px}
+  .brand b{color:var(--gold)}
+  .hearts{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:8px 14px;font:800 15px Nunito,sans-serif}
+  .hearts span{color:var(--pink)}
+  .hearts.pop{animation:pop .6s}
+  @keyframes pop{40%{transform:scale(1.25)}}
+  main{max-width:560px;margin:0 auto;padding:6px 18px 40px}
+  .screen{animation:in .5s ease both}
+  @keyframes in{from{opacity:0;transform:translateY(14px)}}
+  .chip{display:inline-block;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:8px 0 4px}
+  h1,h2{font-family:"Playfair Display",serif;line-height:1.15;margin:.2em 0 .5em}
+  h1{font-size:34px} h2{font-size:28px}
+  p{font-size:18px;line-height:1.55;color:var(--muted);white-space:pre-line}
+  .big35{font-family:"Playfair Display",serif;font-weight:800;font-size:150px;line-height:1;text-align:center;margin:20px 0 0;
+    background:linear-gradient(180deg,#ffe3a3,#f6c96b 45%,#d4894a);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 6px 30px rgba(246,201,107,.35));animation:float 4s ease-in-out infinite}
+  @keyframes float{50%{transform:translateY(-8px)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;margin:16px 0;backdrop-filter:blur(6px)}
+  .riddle{font-family:"Playfair Display",serif;font-style:italic;font-size:21px;line-height:1.5;color:var(--text);white-space:pre-line;margin:0}
+  .btn{display:block;width:100%;border:0;border-radius:16px;padding:17px 18px;margin:12px 0;font:800 18px Nunito,sans-serif;cursor:pointer;
+    color:#2a1022;background:linear-gradient(135deg,#ffd27e,#ff8fb0);box-shadow:0 10px 30px rgba(255,143,176,.25)}
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);box-shadow:none;font-weight:600}
+  .row{display:flex;gap:10px}
+  .row input{flex:1;min-width:0;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--text);font:700 18px Nunito,sans-serif;padding:14px;text-transform:uppercase}
+  .row .btn{width:auto;margin:0;padding:14px 18px}
+  .hint{margin-top:6px;text-align:center;color:var(--gold);font-weight:800;font-size:18px}
+  .progress{height:6px;background:rgba(255,255,255,.08);border-radius:9px;overflow:hidden;margin:4px 0 10px}
+  .progress i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));border-radius:9px;transition:width .6s}
+  .opt{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:14px;padding:15px 16px;margin:10px 0;font:600 18px Nunito,sans-serif}
+  .opt.ok{border-color:var(--ok);background:rgba(95,211,154,.18)}
+  .opt.bad{border-color:var(--bad);background:rgba(255,107,107,.15);animation:shake .4s}
+  @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .feedback{min-height:28px;font-weight:700;color:var(--gold);font-size:17px}
+  .reasons{list-style:none;padding:0;margin:0}
+  .reasons li{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px dashed var(--line);font-size:17px;line-height:1.45}
+  .reasons li:last-child{border-bottom:0}
+  .reasons .n{flex:0 0 32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;background:rgba(255,122,162,.18);color:var(--pink)}
+  .reasons li.locked{color:rgba(255,255,255,.3)}
+  .reasons li.locked .n{background:rgba(255,255,255,.06);color:rgba(255,255,255,.3)}
+  .reasons li.new{animation:in .6s ease both}
+  .gift{font-size:84px;text-align:center;margin:10px 0 0;animation:float 3s ease-in-out infinite}
+  .photo{width:100%;border-radius:22px;display:block;margin:10px 0;border:1px solid var(--line)}
+  .sign{text-align:right;font-family:"Playfair Display",serif;font-style:italic;font-size:20px;color:var(--gold)}
+  .small{font-size:14px;color:rgba(255,255,255,.4);text-align:center}
+  /* modal / scanner */
+  .overlay{position:fixed;inset:0;z-index:40;background:rgba(18,6,20,.92);display:none;overflow:auto;padding:calc(env(safe-area-inset-top) + 16px) 18px 30px}
+  .overlay.open{display:block}
+  .overlay .inner{max-width:560px;margin:0 auto}
+  .close{float:right;border:0;background:var(--card);color:var(--text);border-radius:50%;width:40px;height:40px;font-size:20px}
+  #scanner .inner{text-align:center}
+  #video{width:100%;max-height:60vh;object-fit:cover;border-radius:22px;background:#000;margin-top:16px}
+  .frame{position:relative}
+  .frame:after{content:"";position:absolute;inset:18% 18%;border:3px solid var(--gold);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translate(-50%,40px);opacity:0;z-index:60;
+    background:#fff6f0;color:#2a1022;padding:13px 18px;border-radius:14px;font-weight:800;max-width:90vw;text-align:center;transition:.35s}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<header>
+  <div class="brand">Карина · <b>35</b></div>
+  <button class="hearts" id="heartsBtn">❤ <span id="hc">0</span>/35</button>
+</header>
+<main id="app"></main>
+
+<div class="overlay" id="reasonsModal"><div class="inner">
+  <button class="close" data-close>✕</button>
+  <div class="chip">Коллекция</div>
+  <h2>35 причин, почему я тебя люблю</h2>
+  <ul class="reasons" id="allReasons"></ul>
+</div></div>
+
+<div class="overlay" id="scanner"><div class="inner">
+  <button class="close" data-close>✕</button>
+  <div class="chip" style="display:block;text-align:left">Сканер</div>
+  <p style="text-align:left;margin:0">Наведи камеру на QR-код</p>
+  <div class="frame"><video id="video" playsinline muted></video></div>
+  <canvas id="scanCanvas" hidden></canvas>
+</div></div>
+
+<div id="toast"></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+(function(){
+  var G = window.GAME, STORE = "karina35-quest-v1";
+  var TOTAL = G.reasons.length;
+  var stages = G.steps.filter(function(s){return s.type==="hunt"||s.type==="quiz"}).length;
+
+  function fresh(){ return {step:0, view:"main", q:0, unlocked:0, newFrom:0, hint:false}; }
+  function load(){ try{ return JSON.parse(localStorage.getItem(STORE)); }catch(e){ return null; } }
+  function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
+  var S = load() || fresh();
+
+  var $ = function(id){ return document.getElementById(id); };
+  var app = $("app");
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]}); }
+  function norm(s){ return String(s||"").toUpperCase().replace(/Ё/g,"Е").replace(/[^A-ZА-Я0-9]/g,""); }
+
+  // ---------- toast ----------
+  var tt;
+  function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(tt); tt=setTimeout(function(){t.classList.remove("show")},3200); }
+
+  // ---------- hearts ----------
+  function updateHearts(pop){
+    $("hc").textContent = S.unlocked;
+    if(pop){ var b=$("heartsBtn"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+  }
+  function reasonsHTML(from,to,showLocked,newFrom){
+    var h="";
+    for(var i=from;i<to;i++){
+      var open = i < S.unlocked;
+      if(!open && !showLocked) continue;
+      var cls = open ? (i>=newFrom ? "new" : "") : "locked";
+      var delay = open && i>=newFrom ? ' style="animation-delay:'+((i-newFrom)*0.12)+'s"' : "";
+      h += '<li class="'+cls+'"'+delay+'><span class="n">'+(i+1)+'</span><span>'+(open?esc(G.reasons[i]):"Откроется позже 🔒")+'</span></li>';
+    }
+    return h;
+  }
+  $("heartsBtn").onclick = function(){ $("allReasons").innerHTML = reasonsHTML(0,TOTAL,true,TOTAL); $("reasonsModal").classList.add("open"); };
+  document.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ b.closest(".overlay").classList.remove("open"); stopScan(); }; });
+
+  // ---------- flow ----------
+  function stageNo(){ var n=0; for(var i=0;i<=S.step;i++){ var t=G.steps[i].type; if(t==="hunt"||t==="quiz") n++; } return n; }
+  function next(){ S.step=Math.min(S.step+1,G.steps.length-1); S.view="main"; S.q=0; S.hint=false; save(); render(); window.scrollTo(0,0); }
+  function solve(){
+    var st=G.steps[S.step];
+    S.newFrom=S.unlocked;
+    S.unlocked=Math.min(TOTAL,S.unlocked+(st.reward||0));
+    S.view="success"; save(); render(); window.scrollTo(0,0);
+    updateHearts(true); confetti(160);
+  }
+
+  function tryKey(raw){
+    var k=raw;
+    try{ var u=new URL(raw); k=u.searchParams.get("k")||raw; }catch(e){}
+    k=norm(k);
+    if(!k) return false;
+    var cur=G.steps[S.step];
+    if(cur.type==="hunt" && S.view==="main" && norm(cur.key)===k){ solve(); return true; }
+    var idx=-1; G.steps.forEach(function(s,i){ if(s.key && norm(s.key)===k) idx=i; });
+    if(idx<0){ toast("Хм, такого кода нет 🤔"); return false; }
+    if(idx<S.step || (idx===S.step && S.view!=="main")){ toast("Этот тайник ты уже нашла ✨"); return false; }
+    toast("Рановато! Этот тайник откроется позже 😉"); return false;
+  }
+
+  function header(st){
+    var pct = Math.round((stageNo()-1)/stages*100);
+    return '<div class="chip">Этап '+stageNo()+' из '+stages+'</div><div class="progress"><i style="width:'+pct+'%"></i></div>';
+  }
+  function successHTML(st){
+    var to=S.unlocked;
+    return '<div class="screen">'+
+      '<div class="gift">'+(/Подарок|подарок/.test(st.foundTitle)?"🎁":"✨")+'</div>'+
+      '<h1 style="text-align:center">'+esc(st.foundTitle)+'</h1>'+
+      '<p style="text-align:center">'+esc(st.foundText)+'</p>'+
+      (to>S.newFrom ? '<div class="card"><div class="chip">+'+(to-S.newFrom)+' причин открыто ❤</div><ul class="reasons">'+reasonsHTML(S.newFrom,to,false,S.newFrom)+'</ul></div>' : "")+
+      '<button class="btn" id="nextBtn">Дальше →</button></div>';
+  }
+
+  function render(){
+    updateHearts(false);
+    var st=G.steps[S.step];
+    if(S.view==="success"){ app.innerHTML=successHTML(st); $("nextBtn").onclick=next; return; }
+
+    if(st.type==="intro"){
+      app.innerHTML='<div class="screen"><div class="big35">'+G.age+'</div>'+
+        '<h1 style="text-align:center">'+esc(st.title)+'</h1><p>'+esc(st.text)+'</p>'+
+        '<button class="btn" id="go">'+esc(st.button||"Начать")+'</button></div>';
+      $("go").onclick=function(){ confetti(120); next(); };
+      return;
+    }
+
+    if(st.type==="hunt"){
+      app.innerHTML='<div class="screen">'+header(st)+'<h2>'+esc(st.title)+'</h2>'+
+        '<div class="card"><p class="riddle">'+esc(st.riddle)+'</p></div>'+
+        '<button class="btn" id="scanBtn">📷 Сканировать QR-код</button>'+
+        '<div class="row"><input id="code" placeholder="или слово с карточки" autocomplete="off" autocapitalize="characters"><button class="btn" id="codeBtn">OK</button></div>'+
+        (S.hint ? '<div class="card hint">Подсказка: '+esc(st.hint)+'</div>' : '<button class="btn ghost" id="hintBtn">Нужна подсказка?</button>')+
+        '</div>';
+      $("scanBtn").onclick=startScan;
+      $("codeBtn").onclick=function(){ tryKey($("code").value); };
+      $("code").onkeydown=function(e){ if(e.key==="Enter") tryKey(this.value); };
+      if($("hintBtn")) $("hintBtn").onclick=function(){ S.hint=true; save(); render(); };
+      return;
+    }
+
+    if(st.type==="quiz"){
+      if(S.q>=st.questions.length){ solve(); return; }
+      var q=st.questions[S.q];
+      var html='<div class="screen">'+header(st)+'<h2>'+esc(st.title)+'</h2>'+
+        (S.q===0?'<p>'+esc(st.intro||"")+'</p>':"")+
+        '<div class="chip">Вопрос '+(S.q+1)+' из '+st.questions.length+'</div>'+
+        '<div class="card"><p class="riddle">'+esc(q.q)+'</p></div>';
+      q.options.forEach(function(o,i){ html+='<button class="opt" data-i="'+i+'">'+esc(o)+'</button>'; });
+      html+='<div class="feedback" id="fb"></div></div>';
+      app.innerHTML=html;
+      var done=false;
+      app.querySelectorAll(".opt").forEach(function(b){
+        b.onclick=function(){
+          if(done) return;
+          var i=+b.dataset.i;
+          var ok = q.correct==="any" || (Array.isArray(q.correct)?q.correct.indexOf(i)>=0:q.correct===i);
+          if(ok){
+            done=true; b.classList.add("ok"); $("fb").textContent="Верно! "+(q.comment||"");
+            confetti(40);
+            setTimeout(function(){ S.q++; save(); render(); window.scrollTo(0,0); },1900);
+          } else {
+            b.classList.remove("bad"); void b.offsetWidth; b.classList.add("bad");
+            var msgs=["Хм, подумай ещё 😏","Не-а! Попробуй снова","Я запомню это 😄","Почти… но нет"];
+            $("fb").textContent=msgs[Math.floor(Math.random()*msgs.length)];
+          }
+        };
+      });
+      return;
+    }
+
+    if(st.type==="final"){
+      app.innerHTML='<div class="screen"><div class="big35" style="font-size:110px">'+G.age+'</div>'+
+        '<h1 style="text-align:center">'+esc(st.title)+'</h1>'+
+        (st.photo?'<img class="photo" src="'+esc(st.photo)+'" alt="" onerror="this.remove()">':"")+
+        '<div class="card"><p style="color:var(--text)">'+esc(st.letter)+'</p><div class="sign">'+esc(G.from)+'</div></div>'+
+        '<div class="card"><div class="chip">Все 35 причин ❤</div><ul class="reasons">'+reasonsHTML(0,TOTAL,true,TOTAL)+'</ul></div>'+
+        '<button class="btn" id="more">Ещё конфетти 🎉</button></div>';
+      $("more").onclick=function(){ confetti(250); };
+      setTimeout(function(){ confetti(300); },400);
+      return;
+    }
+  }
+
+  // ---------- QR scanner ----------
+  var stream=null, raf=0;
+  function startScan(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.jsQR){
+      toast("Открой обычную камеру iPhone и наведи на QR 📷"); return;
+    }
+    $("scanner").classList.add("open");
+    navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false}).then(function(s){
+      stream=s; var v=$("video"); v.srcObject=s; v.setAttribute("playsinline",""); v.play(); tick();
+    }).catch(function(){
+      $("scanner").classList.remove("open");
+      toast("Нет доступа к камере. Открой камеру iPhone и наведи на QR 📷");
+    });
+  }
+  function tick(){
+    var v=$("video"), c=$("scanCanvas");
+    if(!stream) return;
+    if(v.readyState===v.HAVE_ENOUGH_DATA){
+      var w=v.videoWidth, h=v.videoHeight, scale=Math.min(1,640/Math.max(w,h));
+      c.width=w*scale; c.height=h*scale;
+      var ctx=c.getContext("2d",{willReadFrequently:true});
+      ctx.drawImage(v,0,0,c.width,c.height);
+      var img=ctx.getImageData(0,0,c.width,c.height);
+      var code=jsQR(img.data,img.width,img.height,{inversionAttempts:"dontInvert"});
+      if(code && code.data){
+        stopScan(); $("scanner").classList.remove("open");
+        tryKey(code.data); return;
+      }
+    }
+    raf=requestAnimationFrame(tick);
+  }
+  function stopScan(){
+    cancelAnimationFrame(raf);
+    if(stream){ stream.getTracks().forEach(function(t){t.stop()}); stream=null; }
+  }
+
+  // ---------- confetti ----------
+  var cv=$("confetti"), cx=cv.getContext("2d"), parts=[], running=false;
+  function resize(){ var d=window.devicePixelRatio||1; cv.width=innerWidth*d; cv.height=innerHeight*d; cx.setTransform(d,0,0,d,0,0); }
+  addEventListener("resize",resize); resize();
+  var COLORS=["#f6c96b","#ff7aa2","#ffffff","#ffd27e","#c88bff","#ff9a76"];
+  function confetti(n){
+    for(var i=0;i<n;i++) parts.push({x:innerWidth*(0.2+Math.random()*0.6),y:innerHeight*0.35,vx:(Math.random()-.5)*12,vy:-Math.random()*14-4,
+      r:Math.random()*6+4,c:COLORS[i%COLORS.length],a:Math.random()*6,va:(Math.random()-.5)*.3,life:0,heart:Math.random()<.18});
+    if(!running){ running=true; requestAnimationFrame(frame); }
+  }
+  function frame(){
+    cx.clearRect(0,0,innerWidth,innerHeight);
+    parts=parts.filter(function(p){ return p.y<innerHeight+40 && p.life<400; });
+    parts.forEach(function(p){
+      p.life++; p.vy+=.32; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.a+=p.va;
+      cx.save(); cx.translate(p.x,p.y); cx.rotate(p.a); cx.fillStyle=p.c;
+      if(p.heart){ cx.font=(p.r*1.8)+"px serif"; cx.fillText("❤",0,0); }
+      else cx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);
+      cx.restore();
+    });
+    if(parts.length) requestAnimationFrame(frame); else { running=false; cx.clearRect(0,0,innerWidth,innerHeight); }
+  }
+
+  // ---------- start ----------
+  var params=new URLSearchParams(location.search);
+  if(params.has("reset")){ S=fresh(); save(); toast("Прогресс сброшен"); }
+  var incoming=params.get("k");
+  if(location.search) history.replaceState(null,"",location.pathname);
+  render();
+  if(incoming){
+    var cur=G.steps[S.step];
+    if(cur.type==="intro"){ next(); cur=G.steps[S.step]; } // если первый QR открыли сразу
+    setTimeout(function(){ tryKey(incoming); },300);
+  }
+})();
+</script>
+</body>
+</html>
