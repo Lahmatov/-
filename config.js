@@ -9,6 +9,27 @@ window.GAME = {
 
   ticker: "С ДНЁМ РОЖДЕНИЯ, КАРИНА ✦ 35 — ЭТО БАЗА ✦ MAIN CHARACTER ✦ МАМА ГОДА ✦ LOVELY LOVE ✦ ЛЕГЕНДА ✦ SLAY 💅 ✦ ",
 
+  // Стикеры (вырезаны из фото, лежат в photos/stickers)
+  stickers: {
+    coffee:  { img: "photos/stickers/coffee.webp",  cap: "без кофе не разговариваю ☕" },
+    serious: { img: "photos/stickers/serious.webp", cap: "когда спросили, что на ужин" },
+    aaa:     { img: "photos/stickers/aaa.webp",     cap: "АААА 😱" },
+    cat:     { img: "photos/stickers/cat.webp",     cap: "кот не одобряет 😾" },
+    monday:  { img: "photos/stickers/monday.webp",  cap: "понедельник 😩" },
+    ski:     { img: "photos/stickers/ski.webp",     cap: "снежная королева ❄" },
+    dino:    { img: "photos/stickers/dino.webp",    cap: "жую 🦖" },
+    fox:     { img: "photos/stickers/fox.webp",     cap: "лис-разбойник 🦊" },
+    spider:  { img: "photos/stickers/spider.webp",  cap: "элегантно 🕷" },
+    hug:     { img: "photos/stickers/hug.webp",     cap: "обнимашки 🤗" },
+    art:     { img: "photos/stickers/art.webp",     cap: "искусствовед 🖼" },
+    turbo:   { img: "photos/stickers/turbo.webp",   cap: "турбо-режим ⚡" },
+  },
+  // стикеры, которые выскакивают сбоку в викторине
+  reactions: {
+    right: ["aaa", "ski", "hug", "spider", "turbo"],
+    wrong: ["cat", "monday", "serious"],
+  },
+
   // мем-подписи
   memes: {
     success: ["это база 💅", "main character energy ✨", "детектив уровня бог 🕵️‍♀️", "мама может 💪", "slay 💅", "легенда 👑", "тайник даже не сопротивлялся", "изи 😎"],
@@ -41,6 +62,8 @@ window.GAME = {
       photo: "photos/places/kofe.jpg",
       zoom: { x: 50, y: 50, scale: 6 },
       hint: "Кофе ☕",
+      sticker: "coffee",
+      stickers: ["coffee", "serious"],
       achievement: "Кофейный детектив ☕",
       foundTitle: "Первый тайник найден!",
       foundText: "Разминка пройдена. А теперь проверим, насколько хорошо ты знаешь нас…",
@@ -91,6 +114,7 @@ window.GAME = {
         },
       ],
       achievement: "Знаток нас 🧠",
+      stickers: ["aaa", "cat"],
       foundTitle: "Ты знаешь нас на 100%!",
       foundText: "Следующий уровень: проверим, насколько хорошо ты знаешь свою семью в лицо 👀",
       reward: 8,
@@ -123,8 +147,16 @@ window.GAME = {
           correct: [1, 2, 3],
           reveal: "Это ты. И да, все ответы верны 😍",
         },
+        {
+          photo: "photos/cat.jpg",
+          zoom: { x: 64, y: 29.5, scale: 6 },
+          options: ["Сова", "Злой мем из интернета", "Кот, который не одобряет твои ошибки", "Паулина утром"],
+          correct: [1, 2],
+          reveal: "Кот. Он смотрит так каждый раз, когда ты ошибаешься в викторине 😾",
+        },
       ],
       achievement: "Глаз-алмаз 👁",
+      stickers: ["monday", "ski"],
       foundTitle: "Глаз-алмаз!",
       foundText: "Всех узнала. Награда — подсказка к первому подарку 🎁",
       reward: 4,
@@ -142,6 +174,8 @@ window.GAME = {
       photo: "photos/places/shkaf.jpg",
       zoom: { x: 50, y: 50, scale: 6 },
       hint: "Шкаф Данилы 👕",
+      sticker: "fox",
+      stickers: ["dino", "fox"],
       achievement: "Шкафолог 👕",
       foundTitle: "🎁 Подарок №1 найден!",
       foundText: "Открывай! А потом возвращайся — квест ещё не закончен.",
@@ -159,6 +193,8 @@ window.GAME = {
         "Он ниже меня ростом, носит шлем как настоящий гонщик и рисует лучше всех. " +
         "Найди его и скажи пароль: «Я тебя люблю!»",
       hint: "Это Данила 😊",
+      sticker: "spider",
+      stickers: ["spider", "hug"],
       achievement: "Мама года 🎨",
       foundTitle: "🎨 Подарок №2 — от Данилы!",
       foundText: "Он рисовал это специально для тебя. Обними художника покрепче!",
@@ -179,6 +215,8 @@ window.GAME = {
       photo: "photos/places/krovat.jpg",
       zoom: { x: 50, y: 50, scale: 6 },
       hint: "Кровать 🛏",
+      sticker: "turbo",
+      stickers: ["art", "turbo"],
       achievement: "Легенда квеста 👑",
       foundTitle: "🎁 Главный подарок!",
       foundText: "Ты прошла весь квест. Открывай, а потом листай вниз…",

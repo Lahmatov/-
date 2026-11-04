@@ -26,10 +26,10 @@
   .ticker .track{display:inline-block;font:800 13px Unbounded,sans-serif;letter-spacing:.04em;animation:tick 22s linear infinite}
   @keyframes tick{to{transform:translateX(-50%)}}
   header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 6px;max-width:560px;margin:0 auto;position:relative;z-index:2}
-  .logo{font:900 17px Unbounded,sans-serif;background:var(--yellow);border:3px solid var(--ink);border-radius:14px;padding:7px 12px;box-shadow:3px 3px 0 var(--ink);transform:rotate(-3deg)}
+  .logo{white-space:nowrap;font:900 15px Unbounded,sans-serif;background:var(--yellow);border:3px solid var(--ink);border-radius:14px;padding:7px 12px;box-shadow:3px 3px 0 var(--ink);transform:rotate(-3deg)}
   .logo b{color:var(--pink)}
   .hdr{display:flex;gap:8px}
-  .pill{border:3px solid var(--ink);background:var(--white);color:var(--ink);border-radius:999px;padding:7px 12px;font:800 15px Unbounded,sans-serif;box-shadow:3px 3px 0 var(--ink);cursor:pointer}
+  .pill{border:3px solid var(--ink);background:var(--white);color:var(--ink);border-radius:999px;padding:7px 9px;font:800 13px Unbounded,sans-serif;white-space:nowrap;box-shadow:3px 3px 0 var(--ink);cursor:pointer}
   .pill:active{transform:translate(3px,3px);box-shadow:none}
   .pill span{color:var(--pink)}
   .pill.pop{animation:pop .6s}
@@ -153,6 +153,28 @@
     30%,50%,70%{transform:scaleX(var(--s)) translateX(0) rotate(-26deg) scale(1.15)}40%,60%{transform:scaleX(var(--s)) translateX(0) rotate(-16deg)}
     85%{opacity:1}100%{transform:scaleX(var(--s)) translateX(-120px) rotate(-20deg);opacity:0}}
   #confetti{position:fixed;inset:0;pointer-events:none;z-index:49}
+  /* stickers */
+  .stk{position:relative;display:inline-flex;flex-direction:column;align-items:center}
+  .stk img{width:100%;display:block}
+  .stk .cap{margin-top:-14px;background:var(--ink);color:#fff;font:800 11px/1.25 Unbounded,sans-serif;padding:5px 9px;border-radius:12px;text-align:center;transform:rotate(-3deg);position:relative;z-index:1;max-width:112%}
+  .stgrid .cap{font-size:9.5px;padding:4px 7px}
+  .titlerow{position:relative;padding-right:100px;min-height:96px}
+  .peel .cap{display:none}
+  .peel{position:absolute;right:-4px;top:-4px;width:92px;z-index:3;animation:bob 3s ease-in-out infinite;--rot:9deg}
+  .newst{display:flex;justify-content:center;gap:14px;margin:6px 0 4px}
+  .newst .stk{width:136px;animation:slap .6s cubic-bezier(.3,1.6,.5,1) both}
+  .newst .stk:nth-child(2){animation-delay:.3s}
+  @keyframes slap{0%{transform:scale(2.4) rotate(-30deg);opacity:0}100%{transform:scale(1) rotate(var(--rot,-6deg));opacity:1}}
+  .stgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
+  .stgrid .stk{width:100%}
+  .stgrid .stk:nth-child(odd){transform:rotate(-5deg)} .stgrid .stk:nth-child(even){transform:rotate(5deg)}
+  .stgrid .lock{aspect-ratio:1/1;border-radius:50%;border:3px dashed rgba(22,17,26,.3);display:grid;place-items:center;font:900 28px Unbounded,sans-serif;color:rgba(22,17,26,.3);margin:8%}
+  .st.ph{background:none;border:0;box-shadow:none;padding:0;width:86px}
+  #pop{position:fixed;z-index:58;bottom:calc(env(safe-area-inset-bottom) + 96px);width:140px;pointer-events:none;transition:transform .45s cubic-bezier(.2,1.4,.4,1)}
+  #pop.l{left:6px;transform:translateX(-190px) rotate(-25deg)} #pop.r{right:6px;transform:translateX(190px) rotate(25deg)}
+  #pop.l.show{transform:translateX(0) rotate(-8deg)} #pop.r.show{transform:translateX(0) rotate(8deg)}
+  .hintcard{cursor:pointer} .hintcard small{display:block;margin-top:8px;font:700 13px Onest,sans-serif;opacity:.7}
+  .hintcard:active{transform:translate(5px,5px);box-shadow:none}
   @media (prefers-reduced-motion:reduce){#bg{display:none}.big35,.st,.bigemoji{animation:none}}
 </style>
 </head>
@@ -165,6 +187,7 @@
   <div class="logo">КАРИНА <b>35</b></div>
   <div class="hdr">
     <button class="pill" id="snd" aria-label="Звук">🔊</button>
+    <button class="pill" id="stBtn" aria-label="Стикеры">🧩 <span id="sc">0</span></button>
     <button class="pill" id="heartsBtn">❤ <span id="hc">0</span>/35</button>
   </div>
 </header>
@@ -185,6 +208,14 @@
   <canvas id="scanCanvas" hidden></canvas>
 </div></div>
 
+<div class="overlay" id="stModal"><div class="inner">
+  <button class="close" data-close>✕</button>
+  <div class="chip">СТИКЕРПАК 🧩</div>
+  <h2>Собери все <mark>стикеры</mark></h2>
+  <p>Каждый пройденный этап открывает новые.</p>
+  <div class="card"><div class="stgrid" id="stGrid"></div></div>
+</div></div>
+<div id="pop"></div>
 <div id="ach"><div class="tr">🏆</div><div><small>Ачивка разблокирована</small><b id="achName"></b></div></div>
 <div id="toast"></div>
 
@@ -198,10 +229,10 @@
   var stages=G.steps.filter(function(s){return COUNTED.indexOf(s.type)>=0}).length;
   var LET="ABCDEFG";
 
-  function fresh(){ return {step:0,view:"main",q:0,unlocked:0,newFrom:0,hint:false,zoomLvl:0,muted:false}; }
+  function fresh(){ return {step:0,view:"main",q:0,unlocked:0,newFrom:0,hint:false,zoomLvl:0,muted:false,got:[],newSt:[]}; }
   function load(){ try{ return JSON.parse(localStorage.getItem(STORE)); }catch(e){ return null; } }
   function save(){ try{ localStorage.setItem(STORE,JSON.stringify(S)); }catch(e){} }
-  var S=load()||fresh();
+  var S=load()||fresh(); S.got=S.got||[]; S.newSt=S.newSt||[];
 
   var $=function(id){ return document.getElementById(id); };
   var app=$("app");
@@ -213,6 +244,13 @@
   function rnd(a,b){ return a+Math.random()*(b-a); }
   // выделяем имя/ключевое слово маркером
   function titleHTML(t){ return esc(t).replace(/(Карина|любимая|Глаз-алмаз|100%)/,"<mark>$1</mark>"); }
+
+  // ---------- стикеры ----------
+  var STK=G.stickers||{}, ORDER=Object.keys(STK);
+  function stkHTML(k,style){ var s=STK[k]; if(!s) return ""; return '<div class="stk"'+(style?' style="'+style+'"':'')+'><img src="'+esc(s.img)+'" alt="'+esc(s.cap)+'"><span class="cap">'+esc(s.cap)+'</span></div>'; }
+  function stkImg(k){ var s=STK[k]; return s?'<img src="'+esc(s.img)+'" alt="" style="width:100%;display:block">':""; }
+  var ptm; function popSticker(k,side){ var p=$("pop"); if(!STK[k]) return; p.className=side||"l"; p.innerHTML=stkHTML(k); void p.offsetWidth; p.classList.add("show"); clearTimeout(ptm); ptm=setTimeout(function(){p.classList.remove("show")},1700); }
+  function stGridHTML(all){ return ORDER.map(function(k,i){ return (all||S.got.indexOf(k)>=0)?stkHTML(k):'<div class="lock">?</div>'; }).join(""); }
 
   $("ticker").textContent=(G.ticker||"").repeat(6);
 
@@ -308,7 +346,7 @@
   // ================= UI helpers =================
   var tt; function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(tt); tt=setTimeout(function(){t.classList.remove("show")},3200); }
   var at; function achievement(name){ if(!name) return; $("achName").textContent=name; var a=$("ach"); a.classList.add("show"); clearTimeout(at); at=setTimeout(function(){a.classList.remove("show")},3800); }
-  function updateHearts(popIt){ $("hc").textContent=S.unlocked; if(popIt){ var b=$("heartsBtn"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); } }
+  function updateHearts(popIt){ $("hc").textContent=S.unlocked; $("sc").textContent=S.got.length+"/"+ORDER.length; if(popIt){ var b=$("heartsBtn"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); } }
   function reasonsHTML(from,to,showLocked,newFrom){
     var h="";
     for(var i=from;i<to;i++){
@@ -318,6 +356,7 @@
     }
     return h;
   }
+  $("stBtn").onclick=function(){ pop(); $("stGrid").innerHTML=stGridHTML(false); $("stModal").classList.add("open"); };
   $("heartsBtn").onclick=function(){ pop(); $("allReasons").innerHTML=reasonsHTML(0,TOTAL,true,TOTAL); $("reasonsModal").classList.add("open"); };
   document.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ b.closest(".overlay").classList.remove("open"); stopScan(); }; });
 
@@ -338,6 +377,7 @@
   function solve(){
     var st=G.steps[S.step];
     S.newFrom=S.unlocked; S.unlocked=Math.min(TOTAL,S.unlocked+(st.reward||0));
+    S.newSt=(st.stickers||[]).filter(function(k){return S.got.indexOf(k)<0;}); S.got=S.got.concat(S.newSt);
     S.view="success"; save(); render(); window.scrollTo(0,0);
     updateHearts(true); celebrate(st.key==="FINAL"); setTimeout(function(){achievement(st.achievement)},700);
   }
@@ -366,8 +406,8 @@
 
   function renderIntro(st){
     app.innerHTML='<div class="screen">'+
-      '<div class="stickers"><div class="st e" style="left:2%;top:10px;--rot:-12deg">🎂</div><div class="st" style="right:0;top:6px;--rot:8deg;background:var(--lime)">это база</div>'+
-      '<div class="st e" style="right:6%;top:150px;--rot:10deg;animation-delay:.5s">👑</div><div class="st" style="left:0;top:160px;--rot:-7deg;background:var(--lav);animation-delay:.8s">slay 💅</div></div>'+
+      '<div class="stickers"><div class="st ph" style="left:-2%;top:-6px;--rot:-12deg">'+stkImg("coffee")+'</div><div class="st" style="right:0;top:6px;--rot:8deg;background:var(--lime)">это база</div>'+
+      '<div class="st ph" style="right:-2%;top:140px;--rot:10deg;animation-delay:.5s">'+stkImg("spider")+'</div><div class="st" style="left:0;top:160px;--rot:-7deg;background:var(--lav);animation-delay:.8s">slay 💅</div></div>'+
       '<div class="big35">'+G.age+'</div>'+
       '<h1 class="center">'+titleHTML(st.title)+'</h1>'+
       '<div class="card yellow"><p>'+esc(st.text)+'</p></div>'+
@@ -378,13 +418,13 @@
   function renderHunt(st){
     var zl=S.zoomLvl||0, steps=3;
     var scale=st.zoom?Math.max(1,st.zoom.scale*(1-zl/steps)):1;
-    app.innerHTML='<div class="screen">'+header()+'<h2>'+esc(st.title)+'</h2>'+
+    app.innerHTML='<div class="screen">'+header()+'<div class="titlerow"><h2>'+esc(st.title)+'</h2>'+(st.sticker?'<div class="peel">'+stkHTML(st.sticker)+'</div>':'')+'</div>'+
       '<div class="card"><span class="label">📜 ЗАГАДКА</span><p class="riddle">'+esc(st.riddle)+'</p></div>'+
       (st.photo?'<div id="zbox"><div class="zoom mag"><span class="tag">📸 ЧТО ЭТО?</span><img id="zimg" src="'+esc(st.photo)+'" alt=""></div>'+
         (zl<steps?'<button class="btn white small" id="zout">🔍 Отдалить фото ('+(steps-zl)+')</button>':'')+'</div>':'')+
       '<button class="btn pinkt" id="scanBtn">📷 Сканировать QR</button>'+
       '<div class="row"><input id="code" placeholder="или слово с карточки" autocomplete="off" autocapitalize="characters"><button class="btn yellow" id="codeBtn">OK</button></div>'+
-      (S.hint?'<div class="card lime"><span class="label">🆘 ПОДСКАЗКА</span><p class="riddle">'+esc(st.hint)+'</p></div>':'<button class="btn white small" id="hintBtn">🆘 Сдаюсь, дай подсказку</button>')+
+      (S.hint?'<div class="card lime hintcard" id="hintCard"><span class="label">🆘 ПОДСКАЗКА</span><p class="riddle">'+esc(st.hint)+'</p><small>👆 Нажми сюда, и код вставится в поле</small></div>':'<button class="btn white small" id="hintBtn">🆘 Сдаюсь, дай подсказку</button>')+
       '</div>';
     if(st.photo){
       var img=$("zimg");
@@ -395,6 +435,7 @@
     $("scanBtn").onclick=function(){ pop(); startScan(); };
     $("codeBtn").onclick=function(){ tryKey($("code").value); };
     $("code").onkeydown=function(e){ if(e.key==="Enter") tryKey(this.value); };
+    if($("hintCard")) $("hintCard").onclick=function(){ var c=$("code"); c.value=st.key; pop(); c.scrollIntoView({behavior:"smooth",block:"center"}); toast("Код вставлен, жми OK 👌"); };
     if($("hintBtn")) $("hintBtn").onclick=function(){ pop(); S.hint=true; save(); var y=scrollY; render(); scrollTo(0,y); };
   }
 
@@ -406,8 +447,8 @@
       b.onclick=function(){
         if(done) return; var i=+b.dataset.i, fb=$("fb");
         fb.classList.remove("go"); void fb.offsetWidth; fb.classList.add("go");
-        if(isRight(q,i)){ done=true; b.classList.add("ok"); fb.textContent=pick(G.memes.right); ding(); var r=b.getBoundingClientRect(); burst(14,null,r.left+r.width/2,r.top+r.height/2); confetti(40); onRight(b); }
-        else{ b.classList.remove("bad"); void b.offsetWidth; b.classList.add("bad"); fb.textContent=pick(G.memes.wrong); buzz(); if(navigator.vibrate) navigator.vibrate(80); }
+        if(isRight(q,i)){ done=true; b.classList.add("ok"); fb.textContent=pick(G.memes.right); ding(); var r=b.getBoundingClientRect(); burst(14,null,r.left+r.width/2,r.top+r.height/2); confetti(40); if(G.reactions) popSticker(pick(G.reactions.right),"r"); onRight(b); }
+        else{ b.classList.remove("bad"); void b.offsetWidth; b.classList.add("bad"); fb.textContent=pick(G.memes.wrong); buzz(); if(G.reactions) popSticker(pick(G.reactions.wrong),"l"); if(navigator.vibrate) navigator.vibrate(80); }
       };
     });
   }
@@ -448,6 +489,7 @@
       '<span class="meme">'+esc(pick(G.memes.success))+'</span>'+
       '<h1 class="center">'+titleHTML(st.foundTitle)+'</h1>'+
       '<p class="center">'+esc(st.foundText)+'</p>'+
+      (S.newSt&&S.newSt.length?'<div class="center"><span class="chip">+'+S.newSt.length+' СТИКЕРА В КОЛЛЕКЦИЮ 🧩</span></div><div class="newst">'+S.newSt.map(function(k,i){return stkHTML(k,"--rot:"+(i?7:-6)+"deg");}).join("")+'</div>':"")+
       (st.foundPhoto?'<div class="pol polone"><img src="'+esc(st.foundPhoto)+'" alt=""><div>'+esc(st.foundPhotoCaption||"")+'</div></div>':"")+
       (to>S.newFrom?'<div class="card"><span class="label">+'+(to-S.newFrom)+' ПРИЧИН ❤</span><ul class="reasons">'+reasonsHTML(S.newFrom,to,false,S.newFrom)+'</ul></div>':"")+
       '<button class="btn lime" id="nextBtn">Дальше →</button></div>';
@@ -473,6 +515,7 @@
         return '<div class="sched"><span class="t">'+esc(s.time)+'</span><span class="i">'+s.icon+'</span><span class="x">'+esc(s.text)+'</span></div>';
       }).join("")+(st.scheduleNote?'<p style="font-weight:700">'+esc(st.scheduleNote)+'</p>':"")+'</div>';
     }
+    if(ORDER.length) h+='<div class="card lav"><span class="label">🧩 СТИКЕРПАК СОБРАН</span><div class="stgrid" style="margin-top:8px">'+stGridHTML(true)+'</div></div>';
     h+='<div class="card"><span class="label">ВСЕ 35 ПРИЧИН ❤</span><ul class="reasons">'+reasonsHTML(0,TOTAL,true,TOTAL)+'</ul></div>'+
       '<button class="btn pinkt" id="more">🎺 Ещё фанфар!</button>'+
       '<button class="btn yellow" id="flw">🌷 Цветочный дождь</button></div>';
