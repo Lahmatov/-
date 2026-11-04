@@ -175,6 +175,13 @@
   #pop.l.show{transform:translateX(0) rotate(-8deg)} #pop.r.show{transform:translateX(0) rotate(8deg)}
   .hintcard{cursor:pointer} .hintcard small{display:block;margin-top:8px;font:700 13px Onest,sans-serif;opacity:.7}
   .hintcard:active{transform:translate(5px,5px);box-shadow:none}
+  /* португальская фраза */
+  .board{display:flex;flex-wrap:wrap;gap:8px;padding-top:6px}
+  .tile{font:900 13px/1.2 Unbounded,sans-serif;background:var(--yellow);border:3px solid var(--ink);border-radius:10px;padding:7px 10px;box-shadow:3px 3px 0 var(--ink)}
+  .tile.locked{background:rgba(255,255,255,.7);color:rgba(22,17,26,.35);border-style:dashed;box-shadow:none}
+  .tile.new{background:var(--pink);color:#fff;animation:slap .6s cubic-bezier(.3,1.6,.5,1) both}
+  .board.big .tile{font-size:17px;padding:10px 13px}
+  .row input.bad{animation:shake .4s;border-color:var(--red)}
   @media (prefers-reduced-motion:reduce){#bg{display:none}.big35,.st,.bigemoji{animation:none}}
 </style>
 </head>
@@ -200,13 +207,6 @@
   <div class="card"><ul class="reasons" id="allReasons"></ul></div>
 </div></div>
 
-<div class="overlay" id="scanner"><div class="inner">
-  <button class="close" data-close>✕</button>
-  <div class="chip">СКАНЕР 📷</div>
-  <h2>Наведи на <mark>QR-код</mark></h2>
-  <div class="frame"><video id="video" playsinline muted></video></div>
-  <canvas id="scanCanvas" hidden></canvas>
-</div></div>
 
 <div class="overlay" id="stModal"><div class="inner">
   <button class="close" data-close>✕</button>
@@ -220,12 +220,11 @@
 <div id="toast"></div>
 
 <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 (function(){
-  var G=window.GAME, STORE="karina35-quest-v2";
+  var G=window.GAME, STORE="karina35-quest-v3";
   var TOTAL=G.reasons.length;
-  var COUNTED=["hunt","quiz","whois"];
+  var COUNTED=["riddle","phrase","found","quiz","whois"];
   var stages=G.steps.filter(function(s){return COUNTED.indexOf(s.type)>=0}).length;
   var LET="ABCDEFG";
 
@@ -358,7 +357,7 @@
   }
   $("stBtn").onclick=function(){ pop(); $("stGrid").innerHTML=stGridHTML(false); $("stModal").classList.add("open"); };
   $("heartsBtn").onclick=function(){ pop(); $("allReasons").innerHTML=reasonsHTML(0,TOTAL,true,TOTAL); $("reasonsModal").classList.add("open"); };
-  document.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ b.closest(".overlay").classList.remove("open"); stopScan(); }; });
+  document.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ b.closest(".overlay").classList.remove("open"); }; });
 
   // точка фокуса для приближения (x,y — проценты исходного фото)
   function focusImg(img,fx_,fy_,scale){
@@ -379,19 +378,25 @@
     S.newFrom=S.unlocked; S.unlocked=Math.min(TOTAL,S.unlocked+(st.reward||0));
     S.newSt=(st.stickers||[]).filter(function(k){return S.got.indexOf(k)<0;}); S.got=S.got.concat(S.newSt);
     S.view="success"; save(); render(); window.scrollTo(0,0);
-    updateHearts(true); celebrate(st.key==="FINAL"); setTimeout(function(){achievement(st.achievement)},700);
+    updateHearts(true); celebrate(!!st.big); setTimeout(function(){achievement(st.achievement)},700);
   }
-  function tryKey(raw){
-    var k=raw; try{ var u=new URL(raw); k=u.searchParams.get("k")||raw; }catch(e){}
-    k=norm(k); if(!k) return false;
-    var cur=G.steps[S.step];
-    if(cur.type==="hunt"&&S.view==="main"&&norm(cur.key)===k){ solve(); return true; }
-    var idx=-1; G.steps.forEach(function(s,i){ if(s.key&&norm(s.key)===k) idx=i; });
-    buzz();
-    if(idx<0){ toast("Хм, такого кода нет 🤔"); return false; }
-    if(idx<S.step||(idx===S.step&&S.view!=="main")){ toast("Этот тайник ты уже нашла ✨"); return false; }
-    toast("Рановато! Этот тайник ждёт своей очереди 😉"); return false;
+  function low(x){ return String(x||"").toLowerCase().replace(/ё/g,"е").replace(/[^a-zа-я0-9\u10d0-\u10ff]/g,""); }
+  function checkAnswer(st,raw){
+    var v=low(raw); if(!v){ toast("Сначала напиши ответ ✍️"); return; }
+    if((st.answers||[]).some(function(a){ return v.indexOf(low(a))>=0; })){ solve(); return; }
+    buzz(); if(navigator.vibrate) navigator.vibrate(80);
+    var msg=null; if(st.wrong) for(var k in st.wrong){ if(v.indexOf(low(k))>=0){ msg=st.wrong[k]; break; } }
+    toast(msg||pick(G.memes.wrong)); if(G.reactions) popSticker(pick(G.reactions.wrong),"l");
+    var inp=$("ans"); if(inp){ inp.classList.remove("bad"); void inp.offsetWidth; inp.classList.add("bad"); }
   }
+  function chapterRiddles(ch){ var r=[]; G.steps.forEach(function(s,i){ if(s.type==="riddle"&&s.chapter===ch) r.push({s:s,i:i}); }); return r; }
+  function boardHTML(ch,big){
+    return '<div class="board'+(big?' big':'')+'">'+chapterRiddles(ch).map(function(o){
+      var isNew=o.i===S.step&&S.view==="success", open=o.i<S.step||isNew;
+      return '<span class="tile'+(open?'':' locked')+(isNew?' new':'')+'">'+(open?esc(o.s.tile):'? ? ?')+'</span>';
+    }).join("")+'</div>';
+  }
+  function peelHTML(st){ return st.sticker?'<div class="peel">'+stkHTML(st.sticker)+'</div>':''; }
   function header(){
     var pct=Math.round((stageNo()-1)/stages*100);
     return '<div class="chip">ЭТАП '+stageNo()+' / '+stages+'</div><div class="progress"><i style="width:'+Math.max(pct,4)+'%"></i></div>';
@@ -401,7 +406,7 @@
     updateHearts(false);
     var st=G.steps[S.step];
     if(S.view==="success") return renderSuccess(st);
-    ({intro:renderIntro,hunt:renderHunt,quiz:renderQuiz,whois:renderWhois,final:renderFinal})[st.type](st);
+    ({intro:renderIntro,riddle:renderRiddle,phrase:renderPhrase,found:renderFound,quiz:renderQuiz,whois:renderWhois,final:renderFinal})[st.type](st);
   }
 
   function renderIntro(st){
@@ -415,28 +420,36 @@
     $("go").onclick=function(){ celebrate(false); setTimeout(next,350); };
   }
 
-  function renderHunt(st){
-    var zl=S.zoomLvl||0, steps=3;
-    var scale=st.zoom?Math.max(1,st.zoom.scale*(1-zl/steps)):1;
-    app.innerHTML='<div class="screen">'+header()+'<div class="titlerow"><h2>'+esc(st.title)+'</h2>'+(st.sticker?'<div class="peel">'+stkHTML(st.sticker)+'</div>':'')+'</div>'+
+  function rerenderKeep(){ var y=scrollY; render(); scrollTo(0,y); }
+  function renderRiddle(st){
+    var rs=chapterRiddles(st.chapter), n=0; rs.forEach(function(o,k){ if(o.i===S.step) n=k+1; });
+    app.innerHTML='<div class="screen">'+header()+
+      '<div class="card sky"><span class="label">🇵🇹 ФРАЗА · ГЛАВА '+st.chapter+'</span>'+boardHTML(st.chapter)+'</div>'+
+      '<div class="titlerow"><h2>Загадка '+n+' / '+rs.length+'</h2>'+peelHTML(st)+'</div>'+
       '<div class="card"><span class="label">📜 ЗАГАДКА</span><p class="riddle">'+esc(st.riddle)+'</p></div>'+
-      (st.photo?'<div id="zbox"><div class="zoom mag"><span class="tag">📸 ЧТО ЭТО?</span><img id="zimg" src="'+esc(st.photo)+'" alt=""></div>'+
-        (zl<steps?'<button class="btn white small" id="zout">🔍 Отдалить фото ('+(steps-zl)+')</button>':'')+'</div>':'')+
-      '<button class="btn pinkt" id="scanBtn">📷 Сканировать QR</button>'+
-      '<div class="row"><input id="code" placeholder="или слово с карточки" autocomplete="off" autocapitalize="characters"><button class="btn yellow" id="codeBtn">OK</button></div>'+
-      (S.hint?'<div class="card lime hintcard" id="hintCard"><span class="label">🆘 ПОДСКАЗКА</span><p class="riddle">'+esc(st.hint)+'</p><small>👆 Нажми сюда, и код вставится в поле</small></div>':'<button class="btn white small" id="hintBtn">🆘 Сдаюсь, дай подсказку</button>')+
+      '<div class="row"><input id="ans" placeholder="Твой ответ" autocomplete="off" autocorrect="off" spellcheck="false"><button class="btn yellow" id="ansBtn">OK</button></div>'+
+      (S.hint?'<div class="card lime hintcard" id="hintCard"><span class="label">🆘 ПОДСКАЗКА</span><p class="riddle">'+esc(st.hint)+'</p><small>👆 Нажми сюда ещё раз, и ответ вставится в поле</small></div>':'<button class="btn white small" id="hintBtn">🆘 Дай подсказку</button>')+
       '</div>';
-    if(st.photo){
-      var img=$("zimg");
-      img.onerror=function(){ var z=$("zbox"); if(z) z.remove(); };
-      focusImg(img,st.zoom?st.zoom.x:50,st.zoom?st.zoom.y:50,scale);
-      if($("zout")) $("zout").onclick=function(){ pop(); S.zoomLvl=zl+1; save(); var y=scrollY; render(); scrollTo(0,y); };
-    }
-    $("scanBtn").onclick=function(){ pop(); startScan(); };
-    $("codeBtn").onclick=function(){ tryKey($("code").value); };
-    $("code").onkeydown=function(e){ if(e.key==="Enter") tryKey(this.value); };
-    if($("hintCard")) $("hintCard").onclick=function(){ var c=$("code"); c.value=st.key; pop(); c.scrollIntoView({behavior:"smooth",block:"center"}); toast("Код вставлен, жми OK 👌"); };
-    if($("hintBtn")) $("hintBtn").onclick=function(){ pop(); S.hint=true; save(); var y=scrollY; render(); scrollTo(0,y); };
+    $("ansBtn").onclick=function(){ checkAnswer(st,$("ans").value); };
+    $("ans").onkeydown=function(e){ if(e.key==="Enter") checkAnswer(st,this.value); };
+    if($("hintCard")) $("hintCard").onclick=function(){ var c=$("ans"); c.value=st.fill||st.answers[0]; pop(); c.scrollIntoView({behavior:"smooth",block:"center"}); toast("Ответ вставлен, жми OK 👌"); };
+    if($("hintBtn")) $("hintBtn").onclick=function(){ pop(); S.hint=true; save(); rerenderKeep(); };
+  }
+  function renderPhrase(st){
+    app.innerHTML='<div class="screen">'+header()+'<div class="titlerow"><h2>'+esc(st.title)+'</h2>'+peelHTML(st)+'</div><p>'+esc(st.text)+'</p>'+
+      '<div class="card yellow"><span class="label">🇵🇹 СОБРАННАЯ ФРАЗА</span>'+boardHTML(st.chapter,true)+'</div>'+
+      (S.hint?'<div class="card lime"><span class="label">🇷🇺 ПЕРЕВОД</span><p class="riddle">'+esc(st.translation)+'</p></div>':'<button class="btn white small" id="trBtn">🤷‍♀️ Не понимаю, переведи</button>')+
+      '<button class="btn pinkt" id="foundBtn">'+esc(st.button||"Я нашла! 🎁")+'</button></div>';
+    if($("trBtn")) $("trBtn").onclick=function(){ pop(); S.hint=true; save(); rerenderKeep(); };
+    $("foundBtn").onclick=solve;
+  }
+  function renderFound(st){
+    app.innerHTML='<div class="screen">'+header()+'<div class="titlerow"><h2>'+esc(st.title)+'</h2>'+peelHTML(st)+'</div>'+
+      '<div class="card"><span class="label">📜 ЗАДАНИЕ</span><p class="riddle">'+esc(st.riddle)+'</p></div>'+
+      (S.hint?'<div class="card lime"><span class="label">🆘 ПОДСКАЗКА</span><p class="riddle">'+esc(st.hint)+'</p></div>':'<button class="btn white small" id="hintBtn">🆘 Дай подсказку</button>')+
+      '<button class="btn pinkt" id="foundBtn">'+esc(st.button||"Готово!")+'</button></div>';
+    if($("hintBtn")) $("hintBtn").onclick=function(){ pop(); S.hint=true; save(); rerenderKeep(); };
+    $("foundBtn").onclick=solve;
   }
 
   function isRight(q,i){ return q.correct==="any"||(Array.isArray(q.correct)?q.correct.indexOf(i)>=0:q.correct===i); }
@@ -484,11 +497,12 @@
   function renderSuccess(st){
     var to=S.unlocked;
     app.innerHTML='<div class="screen">'+
-      '<div class="stamp">НАЙДЕНО!</div>'+
-      '<div class="bigemoji">'+(/одарок/.test(st.foundTitle)?"🎁":st.type==="quiz"?"🧠":st.type==="whois"?"👁":"✨")+'</div>'+
+      '<div class="stamp">'+(st.type==="riddle"||st.type==="whois"?"ВЕРНО!":"НАЙДЕНО!")+'</div>'+
+      '<div class="bigemoji">'+(st.emoji||(/одарок/.test(st.foundTitle||"")?"🎁":st.type==="whois"?"👁":"🧠"))+'</div>'+
       '<span class="meme">'+esc(pick(G.memes.success))+'</span>'+
-      '<h1 class="center">'+titleHTML(st.foundTitle)+'</h1>'+
-      '<p class="center">'+esc(st.foundText)+'</p>'+
+      '<h1 class="center">'+titleHTML(st.foundTitle||pick(G.memes.right))+'</h1>'+
+      '<p class="center">'+esc(st.foundText||st.comment||"")+'</p>'+
+      (st.tile?'<div class="card yellow"><span class="label">+ СЛОВО В ФРАЗУ 🇵🇹</span>'+boardHTML(st.chapter,true)+'</div>':"")+
       (S.newSt&&S.newSt.length?'<div class="center"><span class="chip">+'+S.newSt.length+' СТИКЕРОВ В КОЛЛЕКЦИЮ 🧩</span></div><div class="newst">'+S.newSt.map(function(k,i){return stkHTML(k,"--rot:"+(i%2?7:-6)+"deg");}).join("")+'</div>':"")+
       (st.foundPhoto?'<div class="pol polone"><img src="'+esc(st.foundPhoto)+'" alt=""><div>'+esc(st.foundPhotoCaption||"")+'</div></div>':"")+
       (to>S.newFrom?'<div class="card"><span class="label">+'+(to-S.newFrom)+' ПРИЧИН ❤</span><ul class="reasons">'+reasonsHTML(S.newFrom,to,false,S.newFrom)+'</ul></div>':"")+
@@ -525,38 +539,11 @@
     setTimeout(function(){ celebrate(true); },400);
   }
 
-  // ================= QR SCANNER =================
-  var stream=null, raf=0;
-  function startScan(){
-    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.jsQR){ toast("Открой обычную камеру iPhone и наведи на QR 📷"); return; }
-    $("scanner").classList.add("open");
-    navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false}).then(function(s){
-      stream=s; var v=$("video"); v.srcObject=s; v.setAttribute("playsinline",""); v.play(); tick();
-    }).catch(function(){ $("scanner").classList.remove("open"); toast("Нет доступа к камере. Открой камеру iPhone и наведи на QR 📷"); });
-  }
-  function tick(){
-    var v=$("video"), c=$("scanCanvas"); if(!stream) return;
-    if(v.readyState===v.HAVE_ENOUGH_DATA){
-      var w=v.videoWidth,h=v.videoHeight,sc=Math.min(1,640/Math.max(w,h));
-      c.width=w*sc; c.height=h*sc; var ctx=c.getContext("2d",{willReadFrequently:true});
-      ctx.drawImage(v,0,0,c.width,c.height);
-      var img=ctx.getImageData(0,0,c.width,c.height), code=jsQR(img.data,img.width,img.height,{inversionAttempts:"dontInvert"});
-      if(code&&code.data){ stopScan(); $("scanner").classList.remove("open"); tryKey(code.data); return; }
-    }
-    raf=requestAnimationFrame(tick);
-  }
-  function stopScan(){ cancelAnimationFrame(raf); if(stream){ stream.getTracks().forEach(function(t){t.stop()}); stream=null; } }
-
   // ================= START =================
   var params=new URLSearchParams(location.search);
   if(params.has("reset")){ S=fresh(); save(); toast("Прогресс сброшен"); }
-  var incoming=params.get("k");
   if(location.search) history.replaceState(null,"",location.pathname);
   render();
-  if(incoming){
-    if(G.steps[S.step].type==="intro") next();
-    setTimeout(function(){ tryKey(incoming); },300);
-  }
 })();
 </script>
 </body>
