@@ -206,7 +206,9 @@
   var $=function(id){ return document.getElementById(id); };
   var app=$("app");
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]}); }
-  function norm(s){ return String(s||"").toUpperCase().replace(/Ё/g,"Е").replace(/[^A-ZА-Я0-9]/g,""); }
+  var TR={"А":"A","Б":"B","В":"V","Г":"G","Д":"D","Е":"E","Ё":"E","Ж":"ZH","З":"Z","И":"I","Й":"Y","К":"K","Л":"L","М":"M","Н":"N","О":"O","П":"P","Р":"R","С":"S","Т":"T","У":"U","Ф":"F","Х":"H","Ц":"TS","Ч":"CH","Ш":"SH","Щ":"SCH","Ъ":"","Ы":"Y","Ь":"","Э":"E","Ю":"YU","Я":"YA"};
+  // «кофе» и «KOFE» считаются одним словом
+  function norm(s){ return String(s||"").toUpperCase().replace(/[А-ЯЁ]/g,function(c){return TR[c];}).replace(/[^A-Z0-9]/g,""); }
   function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
   function rnd(a,b){ return a+Math.random()*(b-a); }
   // выделяем имя/ключевое слово маркером
