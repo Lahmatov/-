@@ -155,15 +155,15 @@
   #confetti{position:fixed;inset:0;pointer-events:none;z-index:49}
   /* stickers */
   .stk{position:relative;display:inline-flex;flex-direction:column;align-items:center}
-  .stk img{width:100%;display:block}
-  .stk .cap{margin-top:-14px;background:var(--ink);color:#fff;font:800 11px/1.25 Unbounded,sans-serif;padding:5px 9px;border-radius:12px;text-align:center;transform:rotate(-3deg);position:relative;z-index:1;max-width:112%}
+  .stk img{width:100%;aspect-ratio:1/1;object-fit:contain;display:block}
+  .stk .cap{margin-top:-6px;background:var(--ink);color:#fff;font:800 11px/1.25 Unbounded,sans-serif;padding:5px 9px;border-radius:12px;text-align:center;transform:rotate(-3deg);position:relative;z-index:1;max-width:112%}
   .stgrid .cap{font-size:9.5px;padding:4px 7px}
   .titlerow{position:relative;padding-right:100px;min-height:96px}
   .peel .cap{display:none}
   .peel{position:absolute;right:-4px;top:-4px;width:92px;z-index:3;animation:bob 3s ease-in-out infinite;--rot:9deg}
-  .newst{display:flex;justify-content:center;gap:14px;margin:6px 0 4px}
-  .newst .stk{width:136px;animation:slap .6s cubic-bezier(.3,1.6,.5,1) both}
-  .newst .stk:nth-child(2){animation-delay:.3s}
+  .newst{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 10px;margin:6px 0 4px}
+  .newst .stk{width:124px;animation:slap .6s cubic-bezier(.3,1.6,.5,1) both}
+  .newst .stk:nth-child(2){animation-delay:.25s} .newst .stk:nth-child(3){animation-delay:.5s} .newst .stk:nth-child(4){animation-delay:.75s} .newst .stk:nth-child(5){animation-delay:1s}
   @keyframes slap{0%{transform:scale(2.4) rotate(-30deg);opacity:0}100%{transform:scale(1) rotate(var(--rot,-6deg));opacity:1}}
   .stgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
   .stgrid .stk{width:100%}
@@ -406,7 +406,7 @@
 
   function renderIntro(st){
     app.innerHTML='<div class="screen">'+
-      '<div class="stickers"><div class="st ph" style="left:-2%;top:-6px;--rot:-12deg">'+stkImg("coffee")+'</div><div class="st" style="right:0;top:6px;--rot:8deg;background:var(--lime)">это база</div>'+
+      '<div class="stickers"><div class="st ph" style="left:-2%;top:-6px;--rot:-12deg">'+stkImg("paci")+'</div><div class="st" style="right:0;top:6px;--rot:8deg;background:var(--lime)">это база</div>'+
       '<div class="st ph" style="right:-2%;top:140px;--rot:10deg;animation-delay:.5s">'+stkImg("spider")+'</div><div class="st" style="left:0;top:160px;--rot:-7deg;background:var(--lav);animation-delay:.8s">slay 💅</div></div>'+
       '<div class="big35">'+G.age+'</div>'+
       '<h1 class="center">'+titleHTML(st.title)+'</h1>'+
@@ -489,7 +489,7 @@
       '<span class="meme">'+esc(pick(G.memes.success))+'</span>'+
       '<h1 class="center">'+titleHTML(st.foundTitle)+'</h1>'+
       '<p class="center">'+esc(st.foundText)+'</p>'+
-      (S.newSt&&S.newSt.length?'<div class="center"><span class="chip">+'+S.newSt.length+' СТИКЕРА В КОЛЛЕКЦИЮ 🧩</span></div><div class="newst">'+S.newSt.map(function(k,i){return stkHTML(k,"--rot:"+(i?7:-6)+"deg");}).join("")+'</div>':"")+
+      (S.newSt&&S.newSt.length?'<div class="center"><span class="chip">+'+S.newSt.length+' СТИКЕРОВ В КОЛЛЕКЦИЮ 🧩</span></div><div class="newst">'+S.newSt.map(function(k,i){return stkHTML(k,"--rot:"+(i%2?7:-6)+"deg");}).join("")+'</div>':"")+
       (st.foundPhoto?'<div class="pol polone"><img src="'+esc(st.foundPhoto)+'" alt=""><div>'+esc(st.foundPhotoCaption||"")+'</div></div>':"")+
       (to>S.newFrom?'<div class="card"><span class="label">+'+(to-S.newFrom)+' ПРИЧИН ❤</span><ul class="reasons">'+reasonsHTML(S.newFrom,to,false,S.newFrom)+'</ul></div>':"")+
       '<button class="btn lime" id="nextBtn">Дальше →</button></div>';
