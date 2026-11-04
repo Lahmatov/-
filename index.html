@@ -48,7 +48,7 @@
   .label{position:absolute;top:-15px;left:16px;background:var(--ink);color:#fff;font:800 12px Unbounded,sans-serif;padding:6px 11px;border-radius:999px;transform:rotate(-2deg)}
   .riddle{font-size:20px;line-height:1.5;font-weight:500;padding-top:6px}
   /* buttons */
-  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:3px solid var(--ink);border-radius:18px;padding:17px 18px;margin:14px 0;
+  .btn{text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:3px solid var(--ink);border-radius:18px;padding:17px 18px;margin:14px 0;
     font:800 16px Unbounded,sans-serif;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;color:var(--ink);background:var(--pink);box-shadow:var(--sh);transition:transform .08s,box-shadow .08s}
   .btn:active{transform:translate(5px,5px);box-shadow:0 0 0 var(--ink)}
   .btn.pinkt{color:#fff} .btn.yellow{background:var(--yellow)} .btn.lime{background:var(--lime)} .btn.white{background:#fff} .btn.lav{background:var(--lav)} .btn.sky{background:var(--sky)}
@@ -530,6 +530,14 @@
       }).join("")+(st.scheduleNote?'<p style="font-weight:700">'+esc(st.scheduleNote)+'</p>':"")+'</div>';
     }
     if(ORDER.length) h+='<div class="card lav"><span class="label">🧩 СТИКЕРПАК СОБРАН</span><div class="stgrid" style="margin-top:8px">'+stGridHTML(true)+'</div></div>';
+    var sp=st.stickerpack;
+    if(sp){
+      h+='<div class="card pink"><span class="label">'+esc(sp.title)+'</span><p style="color:#fff;font-weight:600;padding-top:6px">'+esc(sp.text)+'</p>'+
+        '<div class="newst">'+["paci","aaa","cat"].map(function(k,i){return stkHTML(k,"--rot:"+(i%2?7:-6)+"deg");}).join("")+'</div>'+
+        (sp.telegramLink?'<a class="btn sky" href="'+esc(sp.telegramLink)+'" target="_blank" rel="noopener">✈️ Добавить в Telegram</a>':'<a class="btn sky" href="'+esc(sp.telegramZip)+'" download>✈️ Скачать для Telegram</a>')+
+        '<a class="btn lime" href="'+esc(sp.whatsappZip)+'" download>💬 Скачать для WhatsApp</a>'+
+        '<p style="color:#fff;font-size:14px;opacity:.9">В архиве лежит инструкция, как добавить стикеры за пару минут.</p></div>';
+    }
     h+='<div class="card"><span class="label">ВСЕ 35 ПРИЧИН ❤</span><ul class="reasons">'+reasonsHTML(0,TOTAL,true,TOTAL)+'</ul></div>'+
       '<button class="btn pinkt" id="more">🎺 Ещё фанфар!</button>'+
       '<button class="btn yellow" id="flw">🌷 Цветочный дождь</button></div>';

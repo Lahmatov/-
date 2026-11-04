@@ -1,5 +1,5 @@
 # Вырезает стикеры по контуру (как в Telegram): убирает фон, белая обводка, тень.
-import sys, numpy as np
+import sys, os, numpy as np
 from PIL import Image, ImageOps, ImageFilter
 from rembg import remove, new_session
 U='/root/.claude/uploads/3d47777e-b0e0-5bd1-af17-7bffe31784fd/'
@@ -31,7 +31,9 @@ for name in only:
     mask=remove(im,session=sess,post_process_mask=True,only_mask=True)
     # оставляем только крупные куски (без мусора)
     from scipy import ndimage
-    mb=np.array(mask)>110; lab,n=ndimage.label(mb)
+    mb=ndimage.binary_fill_holes(np.array(mask)>110)
+    mask=Image.fromarray(np.maximum(np.array(mask),(mb*255).astype(np.uint8)))
+    lab,n=ndimage.label(mb)
     if n>1:
         sizes=ndimage.sum(mb,lab,range(1,n+1)); keep=[i+1 for i,v in enumerate(sizes) if v>=0.06*sizes.max()]
         mk=np.array(mask); mk[~np.isin(lab,keep)]=0; mask=Image.fromarray(mk)
@@ -44,7 +46,7 @@ for name in only:
     box=(max(0,xs.min()-pad),max(0,ys.min()-pad),min(cut.width,xs.max()+pad),min(cut.height,ys.max()+pad))
     cut=cut.crop(box); 
     W,H=cut.width+2*pad,cut.height+2*pad
-    canvas=Image.new('RGBA',(W,H),(0,0,0,0)); canvas.paste(cut,(pad,pad),cut)
+    canvas=Image.new('RGBA',(W,H),(0,0,0,0)); canvas.paste(cut,(pad,pad))
     # заливаем дырки внутри силуэта (рот, глаза)
     from PIL import ImageDraw
     m=canvas.split()[3].point(lambda v:255 if v>110 else 0)
@@ -59,5 +61,15 @@ for name in only:
     sh=Image.new('RGBA',(W,H),(22,17,26,255)); out.paste(sh,(5,7),shadow)
     wt=Image.new('RGBA',(W,H),(255,255,255,255)); out.paste(wt,(0,0),outline)
     out.alpha_composite(canvas)
-    bb=out.getbbox(); out=out.crop(bb); out.thumbnail((440,440),Image.LANCZOS)
+    bb=out.getbbox(); out=out.crop(bb)
+    # Telegram: одна сторона ровно 512
+    tg=out.copy(); k=512/max(tg.size); tg=tg.resize((max(1,round(tg.width*k)),max(1,round(tg.height*k))),Image.LANCZOS)
+    tg.save('stickerpack/telegram/'+name+'.png',optimize=True)
+    # WhatsApp: ровно 512x512, webp до 100 КБ
+    wa=Image.new('RGBA',(512,512),(0,0,0,0)); t2=tg.copy(); t2.thumbnail((496,496),Image.LANCZOS)
+    wa.paste(t2,((512-t2.width)//2,(512-t2.height)//2),t2)
+    for q in (90,80,70,60,50,40):
+        wa.save('stickerpack/whatsapp/'+name+'.webp',quality=q,method=6)
+        if os.path.getsize('stickerpack/whatsapp/'+name+'.webp')<100*1024: break
+    out.thumbnail((440,440),Image.LANCZOS)
     out.save(OUT+name+'.webp',quality=84,method=6); print(name,out.size)

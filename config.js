@@ -260,6 +260,14 @@ window.GAME = {
         { time: "14:00", icon: "🎂", text: "Приедет торт" },
       ],
       scheduleNote: "Так что далеко не уходи 😉",
+      // Бонус в самом конце: стикерпак семьи
+      stickerpack: {
+        title: "🎁 Бонус: стикерпак нашей семьи",
+        text: "Все 25 стикеров из игры теперь твои. Добавь их в Telegram или WhatsApp и отправляй всем 😎",
+        telegramLink: "", // вставь сюда ссылку t.me/addstickers/... когда создашь пак
+        telegramZip: "stickerpack/karina35-telegram.zip",
+        whatsappZip: "stickerpack/karina35-whatsapp.zip",
+      },
     },
   ],
 
