@@ -17,7 +17,7 @@ serious.png  😐  когда спросили, что на ужин
 sideeye.png  👀  мама подозревает 👀
 paci.png  🍼  соска-режим 🍼
 aaa.png  😱  АААА 😱
-cat.png  😾  Ева не одобряет 😾
+cat.png  😾  недовольная пухлая Ева 😾
 wow.png  😮  ЧТО?! 😮
 what.png  🤨  чё надо? 🤨
 monday.png  😩  понедельник 😩
