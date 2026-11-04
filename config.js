@@ -63,7 +63,7 @@ window.GAME = {
       button: "Погнали 🚀",
     },
 
-    // ================= ГЛАВА 1: ванная =================
+    // ================= ГЛАВА 1: кухня ==================
     {
       type: "riddle", chapter: 1, tile: "O TEU PRESENTE",
       riddle: "Утром бодрит, без него ты не разговариваешь. Чёрный, горячий, в чашке стоит ☕ Что это?",
@@ -73,7 +73,7 @@ window.GAME = {
       sticker: "coffee", stickers: ["coffee", "paci"], reward: 3,
     },
     {
-      type: "riddle", chapter: 1, tile: "ESTÁ NA CASA DE BANHO",
+      type: "riddle", chapter: 1, tile: "ESTÁ NA COZINHA",
       riddle: "Сколько лет мы вместе? Можно цифрой 🗓",
       answers: ["8", "восемь", "eight", "oito"],
       hint: "Больше семи, меньше девяти 😏", fill: "8",
@@ -81,7 +81,7 @@ window.GAME = {
       sticker: "grumpy2", stickers: ["grumpy2", "sideeye"], reward: 3,
     },
     {
-      type: "riddle", chapter: 1, tile: "DEBAIXO",
+      type: "riddle", chapter: 1, tile: "DENTRO DO ARMÁRIO",
       riddle: "Что нам нужно было сказать на свадьбе в Грузии? 🇬🇪💍",
       answers: ["диах", "дьях", "диак", "дях", "дийах", "diakh", "diah", "diax", "diak", "დიახ"],
       wrong: { "да": "Почти! Но по-грузински 😉" },
@@ -90,7 +90,7 @@ window.GAME = {
       sticker: "wow", stickers: ["wow", "what"], reward: 3,
     },
     {
-      type: "riddle", chapter: 1, tile: "DO LAVATÓRIO",
+      type: "riddle", chapter: 1, tile: "ONDE MORA",
       riddle: "Как ты записана у меня в телефоне? 📱",
       answers: ["lovelylove", "лавлилав", "лавли", "lovely"],
       hint: "Два английских слова, и оба про любовь ❤", fill: "Lovely Love",
@@ -98,7 +98,7 @@ window.GAME = {
       sticker: "serious", stickers: ["serious", "ski"], reward: 3,
     },
     {
-      type: "riddle", chapter: 1, tile: "AO PÉ DO ESQUENTADOR",
+      type: "riddle", chapter: 1, tile: "O ASPIRADOR",
       riddle: "Какого цвета была картина, с которой мы уехали из бара? 🖼",
       answers: ["син", "индиго", "navy", "нэви", "неви", "кобальт", "ультрамарин", "сапфир", "лазур", "blue", "azul"],
       hint: "Цвет ночного неба и глубокого океана 🌊", fill: "тёмно-синий",
@@ -109,7 +109,7 @@ window.GAME = {
       type: "phrase", chapter: 1, big: true,
       title: "Фраза собрана! 🇵🇹",
       text: "Прочитай, что получилось, и иди искать 👀",
-      translation: "Твой подарок в ванной, под раковиной, рядом с бойлером 🛁",
+      translation: "Твой подарок на кухне, в шкафу, где живёт пылесос 🧹",
       button: "Я нашла подарок! 🎁",
       sticker: "sideeye",
       achievement: "Полиглот 🇵🇹",
