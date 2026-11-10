@@ -45,36 +45,78 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  ios:
-    name: iOS — сборка и тесты
-    runs-on: macos-15
+  mobile:
+    name: Mobile — типы, тесты, бандлы
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
     steps:
       - uses: actions/checkout@v4
-      - run: brew install xcodegen
-      - name: Генерация проекта
-        working-directory: ios
-        run: xcodegen
-      - name: Сборка и тесты в симуляторе
-        working-directory: ios
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test -- --ci
+      - name: JS-бандлы iOS и Android
+        run: npm run export
+
+  mobile-android:
+    name: Mobile — сборка Android
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - name: Нативный проект (expo prebuild)
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: "1"
+      - name: Сборка debug APK
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon -PreactNativeArchitectures=x86_64
+
+  mobile-ios:
+    name: Mobile — сборка iOS
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - name: Нативный проект (expo prebuild + pod install)
+        run: npx expo prebuild --platform ios
+        env:
+          CI: "1"
+      - name: Сборка для симулятора
+        working-directory: mobile/ios
         run: |
-          SIM=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+( Pro)?' | head -1)
-          echo "Симулятор: $SIM"
-          xcodebuild test \
-            -project Bookshelf.xcodeproj \
-            -scheme Bookshelf \
-            -destination "platform=iOS Simulator,name=$SIM" \
-            -resultBundlePath "$RUNNER_TEMP/TestResults.xcresult" \
+          xcodebuild build \
+            -workspace Polka.xcworkspace \
+            -scheme Polka \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
             -quiet \
             CODE_SIGNING_ALLOWED=NO
-      - name: Причины падений тестов
-        if: failure()
-        run: |
-          xcrun xcresulttool get test-results tests --path "$RUNNER_TEMP/TestResults.xcresult" > "$RUNNER_TEMP/tests.json" || exit 0
-          python3 ios/scripts/print_test_failures.py "$RUNNER_TEMP/tests.json"
-      - name: Отчёт xcresult
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-test-results
-          path: ${{ runner.temp }}/TestResults.xcresult
-          retention-days: 7

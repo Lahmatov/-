@@ -26,7 +26,7 @@
 - **Друзья и лента**: подписки, лента «что читают те, на кого я подписан», публичные профили, свои списки книг.
 - **Обзор**: страницы авторов и жанров, топ по взвешенному рейтингу, «сейчас читают», рекомендации по вкусу.
 - **Прогресс чтения**: страница N из M с полоской прогресса.
-- **Лайки и комментарии** к отзывам, **уведомления** (в вебе и push на iPhone), ссылки «Поделиться» с превью.
+- **Лайки и комментарии** к отзывам, **уведомления** (в приложении и push на iPhone), ссылки «Поделиться» с превью.
 - **Итоги года** картинкой (`/wrapped/2026/image`) — удобно выложить в сторис.
 - **Подтверждение email и сброс пароля** по ссылке из письма; после сброса все сессии и токены отзываются.
   Для отправки писем в production нужен `SMTP_URL`; при разработке письма со ссылками пишутся в лог.
@@ -76,7 +76,7 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
    docker compose up -d
    ```
 3. Через минуту сайт откроется на `https://books.example.com` — сертификат HTTPS Caddy получает сам.
-4. В iOS-приложении укажите этот адрес в `ios/Config/Release.xcconfig` (`API_BASE_URL`).
+4. Этот адрес (`https://…`) — секрет `API_BASE_URL` для сборок приложения (`mobile/README.md`, «Выпуск»).
 
 Обновление: `git pull && docker compose up -d --build`. Резервная копия базы:
 `docker compose exec db pg_dump -U bookshelf bookshelf > backup.sql`.
@@ -91,9 +91,10 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
 Возьмите PostgreSQL в Neon или Supabase и Redis в Upstash (подключение по `rediss://`), задайте `DATABASE_URL`
 и `REDIS_URL`.
 
-## iOS-приложение
+## Мобильное приложение (iOS и Android)
 
-Нативное приложение на SwiftUI лежит в [`ios/`](ios/README.md) и работает с этим же сервером.
+Одно приложение на React Native + Expo для iPhone и Android лежит в [`mobile/`](mobile/README.md) и работает с этим
+же сервером: полка, поиск и сканер ISBN, отзывы, лента, списки, цитаты, клубы, челленджи, итоги, офлайн-режим.
 
 ## JSON API (`/api/v1`)
 
@@ -147,14 +148,16 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
 
 ## Проверки
 
-GitHub Actions на каждый PR: веб (типы, тесты, сборка) и iOS (сборка в Xcode и тесты в симуляторе на macOS).
+GitHub Actions на каждый PR: сервер (типы, тесты, сборка на Postgres + Redis) и мобильное приложение (типы, тесты,
+JS-бандлы, нативные сборки Android и iOS).
 
 ## Стек
 
-Next.js 15 (App Router, server actions) · Prisma · Auth.js v5 · Tailwind CSS 4 · Open Library API.
+Сервер: Next.js 15 (App Router, server actions) · Prisma + PostgreSQL · Redis · Auth.js v5 · Tailwind CSS 4 · Open Library API.
+Приложение: React Native · Expo SDK 58 · Expo Router · TypeScript.
 
 ## Идеи на будущее
 
 - Kindle: сейчас только через файл с устройства — у Amazon нет публичного API библиотеки.
 - Apple Books: публичного API и экспорта нет, поэтому прямой синхронизации не будет; остаётся импорт через CSV.
-- Веб-интерфейс пока только на русском (iOS-приложение — на русском и английском).
+- Веб-интерфейс пока только на русском (мобильное приложение — на русском и английском).

@@ -1,7 +1,7 @@
 name: TestFlight
 
-# Сборка iOS-приложения и загрузка в TestFlight. Запуск вручную (Actions → TestFlight → Run workflow)
-# или пушем тега v* (например, v0.2.0). Настройка секретов — ios/README.md, раздел «TestFlight».
+# Сборка iOS-приложения (mobile/, Expo) и загрузка в TestFlight. Запуск вручную (Actions → TestFlight → Run workflow)
+# или пушем тега v* (например, v0.2.0). Секреты — mobile/README.md, раздел «Выпуск».
 on:
   workflow_dispatch:
   push:
@@ -21,17 +21,22 @@ jobs:
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
+      BUILD_NUMBER: ${{ github.run_number }}
       API_BASE_URL: ${{ secrets.API_BASE_URL }}
-      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
+    defaults:
+      run:
+        working-directory: mobile
     steps:
       - name: Проверка секретов
+        working-directory: .
         run: |
           missing=""
           for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID APP_BUNDLE_ID API_BASE_URL; do
             [ -z "${!name}" ] && missing="$missing $name"
           done
           if [ -n "$missing" ]; then
-            echo "::error::Не заданы секреты:$missing — Settings → Secrets and variables → Actions (см. ios/README.md)"
+            echo "::error::Не заданы секреты:$missing — Settings → Secrets and variables → Actions (см. mobile/README.md)"
             exit 1
           fi
           case "$API_BASE_URL" in
@@ -40,53 +45,47 @@ jobs:
           esac
 
       - uses: actions/checkout@v4
-      - run: brew install xcodegen
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
 
-      - name: Настройки сборки
-        working-directory: ios
+      - name: Нативный проект (expo prebuild + pod install)
+        run: npx expo prebuild --platform ios
+        env:
+          CI: "1"
+
+      - name: Ключ App Store Connect
         run: |
-          host="${API_BASE_URL#https://}"
-          host="${host%/}"
-          reversed="com.googleusercontent.apps.placeholder"
-          if [ -n "$GOOGLE_CLIENT_ID" ]; then
-            reversed="com.googleusercontent.apps.${GOOGLE_CLIENT_ID%.apps.googleusercontent.com}"
-          fi
-          # В xcconfig «//» — комментарий, поэтому слэши разделены $().
-          cat > Config/Local.xcconfig <<CONFIG
-          APP_BUNDLE_ID = $APP_BUNDLE_ID
-          DEVELOPMENT_TEAM = $APPLE_TEAM_ID
-          API_BASE_URL = https:/\$()/$host
-          GOOGLE_CLIENT_ID = $GOOGLE_CLIENT_ID
-          GOOGLE_REVERSED_CLIENT_ID = $reversed
-          CONFIG
-          sed -i '' 's/^ *//' Config/Local.xcconfig
           printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
-          /usr/libexec/PlistBuddy -c "Add :teamID string $APPLE_TEAM_ID" ExportOptions.plist
-          xcodegen
+          cp release/ExportOptions.plist "$RUNNER_TEMP/ExportOptions.plist"
+          /usr/libexec/PlistBuddy -c "Add :teamID string $APPLE_TEAM_ID" "$RUNNER_TEMP/ExportOptions.plist"
 
       - name: Архив
-        working-directory: ios
+        working-directory: mobile/ios
         run: |
           xcodebuild archive \
-            -project Bookshelf.xcodeproj \
-            -scheme Bookshelf \
+            -workspace Polka.xcworkspace \
+            -scheme Polka \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/Bookshelf.xcarchive" \
+            -archivePath "$RUNNER_TEMP/Polka.xcarchive" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
-            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             -quiet
 
       - name: Загрузка в TestFlight
-        working-directory: ios
+        working-directory: mobile/ios
         run: |
           xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/Bookshelf.xcarchive" \
-            -exportOptionsPlist ExportOptions.plist \
+            -archivePath "$RUNNER_TEMP/Polka.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
             -exportPath "$RUNNER_TEMP/export" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
@@ -96,4 +95,5 @@ jobs:
 
       - name: Удалить ключ
         if: always()
+        working-directory: .
         run: rm -f "$RUNNER_TEMP/AuthKey.p8"

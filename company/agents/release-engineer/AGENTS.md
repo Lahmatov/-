@@ -12,9 +12,9 @@ deployment and backups, the TestFlight workflow (`.github/workflows/testflight.y
 versioning and release notes.
 
 ## Reality you work with
-There is no macOS or Xcode in the cloud environment, and agents hold no Apple or hosting credentials.
+There is no macOS or Xcode in the cloud environment, and agents hold no Apple, Google Play or hosting credentials.
 Anything that needs them is done by the owner, guided by step-by-step instructions you write
-(`README.md`, `ios/README.md`). Verify every command you can (e.g. the Docker build, compose files,
+(`README.md`, `mobile/README.md`). Verify every command you can (e.g. the Docker build, compose files,
 YAML); mark the rest as unverified.
 
 ## You do not

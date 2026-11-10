@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Correctness review of a pull request in this repo (API server and iOS app). Use when reviewing a PR before approving and merging it.
+description: Correctness review of a pull request in this repo (API server and mobile app). Use when reviewing a PR before approving and merging it.
 ---
 
 # PR review (correctness)
@@ -15,9 +15,9 @@ hunks, and run the checks yourself.
    `npx tsc --noEmit`, `npm test` (with `REDIS_URL` set if Redis is available), `npm run build`.
    API changes: start Postgres + Redis (`docker compose -f docker-compose.dev.yml up -d`),
    `npx prisma db push`, `npm start`, and call the changed endpoints with curl.
-3. iOS changes: there is no Xcode in the cloud. Read the Swift code, rely on the CI job
-   `iOS — сборка и тесты` for the build and tests, and say so. Model/networking tests can also run on
-   Linux in the `swift:6.0` Docker image (see `CLAUDE.md`).
+3. Mobile changes: `cd mobile && npm ci && npm run typecheck && npm test && npm run export`. Native
+   compilation is checked only by the CI jobs `Mobile — сборка Android` / `Mobile — сборка iOS` — say so.
+   There are no devices in the cloud.
 4. Walk the checklist below. Every finding needs file, line and a concrete failing scenario.
 5. Submit one review with `pull_request_review_write`.
 
@@ -32,8 +32,9 @@ hunks, and run the checks yourself.
 - **Rate limits and secrets.** Login, registration, reset and invite codes are rate-limited; no secrets
   in the repository; no reset/verification links in production logs.
 - **Tests.** New behaviour has a test; a bug fix has a regression test.
-- **iOS.** Strings localized; offline-capable changes go through the queue; data loading and sheets are
-  not attached to a List `Section`/`Group`; UI test fixtures match the real server's JSON format.
+- **Mobile.** Strings go through `L()` with English in `src/i18n/en*.json`; offline-capable changes go through
+  the queue; hooks rules respected (no conditional hooks); iOS-only APIs (`Alert.prompt`, Apple sign-in) guarded
+  by `Platform.OS`; types match the real server's JSON.
 - **Scope.** The PR does what its description says and nothing unrelated.
 
 ## Verdict

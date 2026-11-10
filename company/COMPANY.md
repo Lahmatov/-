@@ -3,7 +3,7 @@ schema: agentcompanies/v1
 kind: company
 slug: polka-studio
 name: Polka Studio
-description: A small company of AI agents that builds and ships the «Полка» book-tracking app (iOS + API server).
+description: A small company of AI agents that builds and ships the «Полка» book-tracking app (iOS + Android app and API server).
 version: 0.1.0
 license: proprietary
 goals:
@@ -27,7 +27,7 @@ statuses, and two control stages (review, then approval) on every piece of work.
 ## Mission
 
 Ship to the App Store «Полка» (Bookshelf): a reading tracker in the spirit of IMDb — shelf statuses,
-ratings and reviews, quotes, book clubs, challenges, friends — with a native SwiftUI app (`ios/`) and a
+ratings and reviews, quotes, book clubs, challenges, friends — with a React Native + Expo app for iOS and Android (`mobile/`) and a
 Next.js + PostgreSQL + Redis API server (repository root).
 
 ## The board of directors

@@ -1,6 +1,7 @@
 # Полка (Bookshelf)
 
-Reading tracker «like IMDb for books». The product is the **iOS app** (`ios/`, SwiftUI). The repository
+Reading tracker «like IMDb for books». The product is the **mobile app for iOS and Android** (`mobile/`, React Native +
+Expo, TypeScript). The repository
 root is its **API server**: Next.js 15 (App Router) + Prisma + PostgreSQL + Redis, JSON API in
 `app/api/v1`. The few web pages serve share links, email links (verify / reset password) and moderation.
 
@@ -34,15 +35,14 @@ so verdicts are PR comments.
   `cp .env.example .env`, `npx prisma db push`, `npm run db:seed`.
 - Server checks: `npx tsc --noEmit && npm test && npm run build`; run the server with `npm start` after
   a build and check changed endpoints with curl (see the API table in `README.md`).
-- iOS: `cd ios && xcodegen` then build in Xcode (owner's Mac) — in the cloud there is no Xcode, CI
-  job `iOS — сборка и тесты` builds and runs unit + UI tests. Models, `APIClient` and their tests can be
-  checked on Linux with Docker: a Swift package that compiles `Bookshelf/Models`, `Bookshelf/Networking`,
-  `Bookshelf/Auth/AuthStore.swift` and `Shared/L10n.swift` with `BookshelfTests`, run in `swift:6.0-noble`.
-- Release: Docker image + `docker-compose.yml` (README «Деплой»); TestFlight workflow
-  (`ios/README.md`, «TestFlight») — needs the owner's Apple Developer account and secrets.
+- Mobile: `cd mobile && npm ci && npm run typecheck && npm test && npm run export` (JS bundles for iOS and Android).
+  Native builds need Xcode / Android SDK: CI jobs `Mobile — сборка Android` and `Mobile — сборка iOS` run
+  `expo prebuild` and compile. Native folders `mobile/ios`, `mobile/android` are generated, never committed.
+- Release: Docker image + `docker-compose.yml` (README «Деплой»); TestFlight and Android release workflows
+  (`mobile/README.md`, «Выпуск») — need the owner's Apple Developer / Google Play accounts and secrets.
 
 ## Conventions
 
 - Talk to the owner and write Trello cards in Russian; code, commits and PRs in English.
-- iOS strings: Russian source, English in `ios/Shared/en.lproj/Localizable.strings`.
+- App strings: Russian source via `L()`, English in `mobile/src/i18n/en*.json`.
 - Server error messages are Russian; validation lives in `lib/validation.ts`, JSON shapes in `lib/api.ts`.

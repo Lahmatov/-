@@ -1,6 +1,6 @@
 ---
 name: ios-engineer
-description: "iOS engineer (SwiftUI app, widget, unit and UI tests). Use for app screens, networking, offline queue and localization."
+description: "Mobile engineer (React Native + Expo app for iOS and Android in mobile/). Use for app screens, networking, offline queue and localization."
 tools: Read, Write, Edit, Glob, Grep, Bash, Skill, mcp__Trello__trelloReadBoard, mcp__Trello__trelloReadList, mcp__Trello__trelloReadCard, mcp__Trello__trelloSearch, mcp__Trello__trelloWriteCard, mcp__Trello__trelloWriteChecklist, mcp__github__create_pull_request, mcp__github__pull_request_read, mcp__github__get_job_logs, mcp__github__add_issue_comment
 ---
 
