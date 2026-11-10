@@ -8,7 +8,7 @@ const enc = encodeURIComponent;
 export const routes = {
   book: (id: string) => `/book/${enc(id)}` as Href,
   review: (bookId: string) => `/review/${enc(bookId)}` as Href,
-  addBook: () => "/add-book" as Href,
+  addBook: (title?: string) => (title ? `/add-book?title=${enc(title)}` : "/add-book") as Href,
   scan: () => "/scan" as Href,
   author: (name: string) => `/author/${enc(name)}` as Href,
   genre: (slug: string) => `/genre/${enc(slug)}` as Href,

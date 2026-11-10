@@ -10,6 +10,9 @@ import {
   Text,
   TextInput,
   View,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
+  type AccessibilityState,
   type StyleProp,
   type TextInputProps,
   type ViewStyle,
@@ -74,6 +77,9 @@ export function Row({
   first,
   testID,
   accessibilityLabel,
+  accessibilityState,
+  accessibilityActions,
+  onAccessibilityAction,
   style,
 }: {
   children: ReactNode;
@@ -83,6 +89,9 @@ export function Row({
   first?: boolean;
   testID?: string;
   accessibilityLabel?: string;
+  accessibilityState?: AccessibilityState;
+  accessibilityActions?: readonly AccessibilityActionInfo[];
+  onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
@@ -100,6 +109,9 @@ export function Row({
       onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={accessibilityState}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
       style={({ pressed }) => pressed && { opacity: 0.6 }}
     >
       {content}

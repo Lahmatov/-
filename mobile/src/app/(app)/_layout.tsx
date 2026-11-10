@@ -18,6 +18,13 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false, title: L("Назад") }} />
       <Stack.Screen name="add-book" options={{ presentation: "modal", title: L("Новая книга") }} />
       <Stack.Screen name="scan" options={{ presentation: "fullScreenModal", headerShown: false }} />
+      <Stack.Screen name="review/[bookId]" options={{ presentation: "modal" }} />
+      <Stack.Screen name="quote-edit" options={{ presentation: "modal" }} />
+      <Stack.Screen name="comments/[entryId]" options={{ presentation: "modal" }} />
+      <Stack.Screen name="list-edit" options={{ presentation: "modal" }} />
+      <Stack.Screen name="add-to-list/[bookId]" options={{ presentation: "modal" }} />
+      <Stack.Screen name="club-new" options={{ presentation: "modal" }} />
+      <Stack.Screen name="challenge-new" options={{ presentation: "modal" }} />
     </Stack>
   );
 }

@@ -1,1 +1,19 @@
-{}
+{
+  "Без оценки": "No rating",
+  "Видно другим": "Visible to others",
+  "Видно только вам": "Only visible to you",
+  "Всего страниц": "Total pages",
+  "Ещё": "More",
+  "Камера": "Camera",
+  "Книги нет на полке": "This book isn't on your shelf",
+  "Нет доступа к камере": "No camera access",
+  "Открыть настройки": "Open Settings",
+  "Оценить и написать отзыв": "Rate and write a review",
+  "Очистить": "Clear",
+  "Предыдущий месяц": "Previous month",
+  "Разрешите доступ к камере в настройках или введите ISBN вручную.": "Allow camera access in Settings or enter the ISBN manually.",
+  "Разрешите доступ, чтобы сканировать штрихкод, или введите ISBN вручную.": "Allow access to scan the barcode, or enter the ISBN manually.",
+  "Разрешить доступ": "Allow access",
+  "Следующий месяц": "Next month",
+  "Сначала отметьте статус книги.": "Set the book's status first."
+}
