@@ -43,6 +43,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    /**
+     * Auth.js создаёт пользователя Google с emailVerified: null. Если Google подтвердил адрес, отмечаем его
+     * подтверждённым: от этого зависят права модератора (lib/moderation.ts) и баннер «подтвердите email».
+     */
+    async signIn({ user, account, profile }) {
+      const email = typeof profile?.email === "string" ? profile.email.toLowerCase() : null;
+      if (account?.provider !== "google" || profile?.email_verified !== true || !user.id || !email) return;
+      if (user.email?.toLowerCase() !== email) return;
+      await db.user.updateMany({ where: { id: user.id, emailVerified: null }, data: { emailVerified: new Date() } });
+    },
+  },
   callbacks: {
     /** Сессия, выданная до смены пароля, больше не действует. */
     async jwt({ token }) {

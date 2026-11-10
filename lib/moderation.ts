@@ -1,6 +1,8 @@
 import { db } from "./db";
 
-// Жалобы на отзывы и комментарии. Модераторы — пользователи с email из ADMIN_EMAILS (через запятую).
+// Жалобы на отзывы и комментарии. Модераторы — пользователи с подтверждённым email из ADMIN_EMAILS
+// (через запятую). Без подтверждения нельзя: email при регистрации не проверяется, и кто угодно мог бы
+// зарегистрироваться с адресом модератора раньше него.
 
 export const REPORT_REASONS = {
   SPAM: "Спам или реклама",
@@ -18,10 +20,15 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return admins.includes(email.toLowerCase());
 }
 
+/** Модератор — только если адрес из ADMIN_EMAILS подтверждён (ссылкой из письма, Google или Apple). */
+export function isAdminUser(user: { email: string | null; emailVerified: Date | null } | null | undefined): boolean {
+  return !!user?.emailVerified && isAdminEmail(user.email);
+}
+
 export async function isAdmin(userId: string | null | undefined) {
   if (!userId) return false;
-  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
-  return isAdminEmail(user?.email);
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true, emailVerified: true } });
+  return isAdminUser(user);
 }
 
 /** Жалоба. Повторная жалоба того же человека на то же — не дублируется. */

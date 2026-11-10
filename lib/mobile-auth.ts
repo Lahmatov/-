@@ -52,9 +52,13 @@ export async function findOrCreateOAuthUser(provider: "google" | "apple", identi
     throw new AccountConflictError("Этот email уже зарегистрирован с паролем — войдите по email и паролю.");
   }
 
-  const user =
-    existing ??
-    (await db.user.create({ data: { email, name: name?.trim() || null, emailVerified: email ? new Date() : null } }));
+  // Провайдер подтвердил адрес (иначе email = null), так что существующий аккаунт без пароля тоже
+  // считаем подтверждённым — например, созданный входом через Google на сайте.
+  const user = existing
+    ? existing.emailVerified
+      ? existing
+      : await db.user.update({ where: { id: existing.id }, data: { emailVerified: new Date() } })
+    : await db.user.create({ data: { email, name: name?.trim() || null, emailVerified: email ? new Date() : null } });
   await db.account.create({
     data: { userId: user.id, type: "oidc", provider, providerAccountId: identity.sub },
   });
