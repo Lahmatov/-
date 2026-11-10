@@ -96,6 +96,20 @@ export function clientIp(req: Pick<Request, "headers">): string {
   return forwarded?.at(-1) || req.headers.get("x-real-ip") || "unknown";
 }
 
+const REGISTER_PER_IP = 10;
+
+/**
+ * Попытка регистрации с IP: не больше 10 за 15 минут. Считается каждая попытка, удачная или нет.
+ * Один ключ для API и веб-формы, чтобы лимит нельзя было обойти, переключаясь между ними.
+ * Возвращает false, если лимит исчерпан.
+ */
+export async function allowRegistrationAttempt(ip: string): Promise<boolean> {
+  const key = `register:${ip}`;
+  if (await isRateLimited(key, REGISTER_PER_IP)) return false;
+  await recordFailure(key);
+  return true;
+}
+
 const LOGIN_PER_IP = 30;
 const LOGIN_PER_IP_AND_EMAIL = 10;
 

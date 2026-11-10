@@ -2,6 +2,7 @@ import { after, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import Redis from "ioredis";
 import {
+  allowRegistrationAttempt,
   clientIp,
   isLoginLimited,
   isRateLimited,
@@ -60,6 +61,14 @@ for (const [name, makeStore] of stores) {
       for (let i = 0; i < 30; i++) await recordLoginFailure(loginKeys(ip(4), `spray${i}@example.com`));
       await recordLoginSuccess(loginKeys(ip(4), "me@example.com"));
       assert.equal(await isLoginLimited(loginKeys(ip(4), "other@example.com")), true);
+    });
+
+    test("регистрация: 10 попыток за 15 минут с IP, общий ключ для API и веб-формы", async () => {
+      setRateLimitStore(makeStore());
+      for (let i = 0; i < 10; i++) assert.equal(await allowRegistrationAttempt(ip(5)), true);
+      assert.equal(await allowRegistrationAttempt(ip(5)), false);
+      assert.equal(await isRateLimited(`register:${ip(5)}`), true);
+      assert.equal(await allowRegistrationAttempt(ip(6)), true);
     });
   });
 }

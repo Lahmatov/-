@@ -18,7 +18,7 @@ import { addToList, createList, deleteList, removeFromList, updateList } from ".
 import { setGoal } from "./stats";
 import { bookExists, createBook, importBooks, saveShelfReview, setProgress, setShelfStatus } from "./shelf";
 import { requestPasswordReset, resetPassword, sendVerificationEmail } from "./account";
-import { isRateLimited, recordFailure } from "./rate-limit";
+import { allowRegistrationAttempt, clientIp, isRateLimited, recordFailure } from "./rate-limit";
 import { headers } from "next/headers";
 import { isAdmin, isReportReason, report, resolveReport } from "./moderation";
 
@@ -33,6 +33,10 @@ async function requireUserId(): Promise<string> {
 // ---------- Авторизация ----------
 
 export async function register(_: FormState, formData: FormData): Promise<FormState> {
+  // Тот же лимит и тот же ключ, что в POST /api/v1/auth/register.
+  if (!(await allowRegistrationAttempt(clientIp({ headers: await headers() })))) {
+    return { error: "Слишком много попыток. Подождите 15 минут." };
+  }
   const parsed = registerSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { name, email, password } = parsed.data;
