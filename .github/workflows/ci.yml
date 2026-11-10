@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web — типы, тесты, сборка
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bookshelf
+          POSTGRES_PASSWORD: bookshelf
+          POSTGRES_DB: bookshelf
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bookshelf" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://bookshelf:bookshelf@localhost:5432/bookshelf
+      REDIS_URL: redis://localhost:6379
+      AUTH_SECRET: ci-secret-not-for-production
+      AUTH_TRUST_HOST: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma db push
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  mobile:
+    name: Mobile — типы, тесты, бандлы
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test -- --ci
+      - name: JS-бандлы iOS и Android
+        run: npm run export
+
+  mobile-android:
+    name: Mobile — сборка Android
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - name: Нативный проект (expo prebuild)
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: "1"
+      - name: Сборка debug APK
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon -PreactNativeArchitectures=x86_64
+
+  mobile-ios:
+    name: Mobile — сборка iOS
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Свежий Xcode (Expo SDK 58 требует Swift 6.2)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - name: Нативный проект (expo prebuild + pod install)
+        run: npx expo prebuild --platform ios
+        env:
+          CI: "1"
+      - name: Сборка для симулятора
+        working-directory: mobile/ios
+        run: |
+          xcodebuild build \
+            -workspace Polka.xcworkspace \
+            -scheme Polka \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO

@@ -1,0 +1,409 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// PostgreSQL. Для разработки: `docker compose up -d db` (см. README).
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Пользователи и авторизация (модели Auth.js) ----------
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String?   @unique
+  emailVerified     DateTime?
+  image             String?
+  passwordHash      String?
+  // Сессии сайта (JWT), выданные раньше этого момента, недействительны — после сброса пароля.
+  passwordChangedAt DateTime?
+  createdAt         DateTime  @default(now())
+
+  accounts              Account[]
+  sessions              Session[]
+  apiTokens             ApiToken[]
+  goals                 ReadingGoal[]
+  likes                 ReviewLike[]
+  comments              ReviewComment[]
+  notifications         Notification[]         @relation("NotificationRecipient")
+  actedNotifications    Notification[]         @relation("NotificationActor")
+  devices               DeviceToken[]
+  reports               Report[]
+  following             Follow[]               @relation("Follower")
+  followers             Follow[]               @relation("Following")
+  activities            Activity[]
+  lists                 BookList[]
+  entries               ShelfEntry[]
+  quotes                Quote[]
+  booksAdded            Book[]                 @relation("BookAddedBy")
+  clubMembers           ClubMember[]
+  clubPosts             ClubPost[]
+  challengeParticipants ChallengeParticipant[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Токены для мобильного приложения (Authorization: Bearer ...). В базе хранится только SHA-256.
+model ApiToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  name       String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ---------- Каталог книг ----------
+
+model Book {
+  id             String   @id @default(cuid())
+  title          String
+  author         String
+  year           Int?
+  isbn           String?
+  coverUrl       String?
+  openLibraryKey String?  @unique
+  pageCount      Int?
+  // Нижний регистр "название автор" — для поиска (в т.ч. по кириллице) и дедупликации.
+  searchText     String
+  createdAt      DateTime @default(now())
+  addedById      String?
+
+  addedBy    User?          @relation("BookAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  entries    ShelfEntry[]
+  quotes     Quote[]
+  clubs      Club[]
+  activities Activity[]
+  listItems  BookListItem[]
+  genres     BookGenre[]
+
+  @@index([searchText])
+  @@index([isbn])
+}
+
+// ---------- Полка пользователя ----------
+
+// status: WANT | READING | PAUSED | READ | DROPPED (см. lib/status.ts)
+model ShelfEntry {
+  id           String    @id @default(cuid())
+  userId       String
+  bookId       String
+  status       String
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  rating       Int? // 1..10
+  currentPage  Int? // прогресс чтения
+  totalPages   Int? // страниц в издании читателя, если отличается от книги
+  review       String?
+  isPublic     Boolean   @default(true)
+  // Отзыв скрыт модератором после жалобы: оценка остаётся, текст не показывается другим.
+  reviewHidden Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book     Book            @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  likes    ReviewLike[]
+  comments ReviewComment[]
+
+  @@unique([userId, bookId])
+  @@index([userId, status])
+}
+
+/// Цитата из книги: вручную или из выделений Kindle. По умолчанию видна только автору.
+model Quote {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  text      String
+  page      Int?
+  note      String?
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId, isPublic])
+  @@index([userId, createdAt])
+}
+
+// Цель на год: сколько книг пользователь хочет прочитать.
+model ReadingGoal {
+  userId String
+  year   Int
+  target Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, year])
+}
+
+// ---------- Друзья и лента ----------
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+}
+
+// Событие для ленты. type: STATUS (сменил статус) | REVIEW (оценил или написал отзыв).
+// Текст отзыва не копируется — лента берёт его из ShelfEntry, только если отзыв публичный.
+model Activity {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  type      String
+  status    String?
+  rating    Int?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// ---------- Свои списки ----------
+
+model BookList {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items BookListItem[]
+
+  @@index([userId])
+}
+
+model BookListItem {
+  listId  String
+  bookId  String
+  addedAt DateTime @default(now())
+
+  list BookList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  book Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@id([listId, bookId])
+}
+
+// ---------- Жанры ----------
+
+// Справочник жанров (см. lib/genres.ts). Книге жанры ставятся из тем Open Library или читателями.
+model Genre {
+  slug       String      @id
+  name       String
+  books      BookGenre[]
+  challenges Challenge[]
+}
+
+model BookGenre {
+  bookId    String
+  genreSlug String
+  addedById String?
+
+  book  Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreSlug], references: [slug], onDelete: Cascade)
+
+  @@id([bookId, genreSlug])
+  @@index([genreSlug])
+}
+
+// ---------- Лайки, комментарии, уведомления ----------
+
+model ReviewLike {
+  userId    String
+  entryId   String
+  createdAt DateTime @default(now())
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry ShelfEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, entryId])
+  @@index([entryId])
+}
+
+model ReviewComment {
+  id        String   @id @default(cuid())
+  entryId   String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry ShelfEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId, createdAt])
+}
+
+// type: FOLLOW | LIKE | COMMENT
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  actorId   String
+  type      String
+  entryId   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// Токены устройств для push-уведомлений (APNs).
+model DeviceToken {
+  token     String   @id
+  userId    String
+  lang      String   @default("ru")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Жалобы ----------
+
+// Жалоба на отзыв (entryId) или комментарий (commentId). reason: SPAM | ABUSE | SPOILER | OTHER.
+model Report {
+  id         String    @id @default(cuid())
+  reporterId String
+  entryId    String?
+  commentId  String?
+  reason     String
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  resolution String? // HIDDEN | DELETED | DISMISSED
+
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([resolvedAt, createdAt])
+}
+
+/// Книжный клуб: группа читает одну книгу и обсуждает её по главам. Вход — по коду приглашения.
+model Club {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  bookId      String
+  /// Число глав — для выбора главы в обсуждении (необязательно).
+  chapters    Int?
+  inviteCode  String   @unique
+  ownerId     String
+  createdAt   DateTime @default(now())
+
+  book    Book         @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  members ClubMember[]
+  posts   ClubPost[]
+}
+
+model ClubMember {
+  id       String   @id @default(cuid())
+  clubId   String
+  userId   String
+  /// До какой главы участник дочитал: сообщения о более поздних главах скрыты как спойлеры.
+  chapter  Int      @default(0)
+  joinedAt DateTime @default(now())
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId])
+  @@index([userId])
+}
+
+model ClubPost {
+  id        String   @id @default(cuid())
+  clubId    String
+  userId    String
+  /// Глава, к которой относится сообщение; null — общее обсуждение без спойлеров.
+  chapter   Int?
+  text      String
+  createdAt DateTime @default(now())
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, createdAt])
+}
+
+/// Челлендж: «прочитать N книг с даты по дату» (можно в одном жанре). Прогресс считается по полке:
+/// книги со статусом «Прочитал» и датой окончания внутри периода. Выполнившие получают значок.
+model Challenge {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  goal        Int
+  startsAt    DateTime
+  endsAt      DateTime
+  genreSlug   String?
+  /// Публичные видны всем и открыты для вступления; закрытые — только по коду.
+  isPublic    Boolean  @default(true)
+  inviteCode  String   @unique
+  ownerId     String
+  createdAt   DateTime @default(now())
+
+  genre        Genre?                 @relation(fields: [genreSlug], references: [slug], onDelete: SetNull)
+  participants ChallengeParticipant[]
+
+  @@index([isPublic, endsAt])
+}
+
+model ChallengeParticipant {
+  id          String   @id @default(cuid())
+  challengeId String
+  userId      String
+  joinedAt    DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([userId])
+}

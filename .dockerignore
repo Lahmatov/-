@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+ios
+mobile
+*.db
+*.db-journal
+.env
+.env.local
