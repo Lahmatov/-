@@ -93,15 +93,15 @@ jobs:
 
   mobile-ios:
     name: Mobile — сборка iOS
-    runs-on: macos-15
+    runs-on: macos-26
     defaults:
       run:
         working-directory: mobile
     steps:
-      - name: Свежий Xcode (Expo SDK 58 требует Swift 6.2)
+      - name: Xcode 27 (под него собраны модули Expo SDK 58)
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: "27"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
