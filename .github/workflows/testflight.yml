@@ -44,6 +44,10 @@ jobs:
             *) echo "::error::API_BASE_URL должен начинаться с https://"; exit 1 ;;
           esac
 
+      - name: Свежий Xcode (Expo SDK 58 требует Swift 6.2)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
