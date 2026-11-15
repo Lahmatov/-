@@ -22,7 +22,7 @@ export function ReviewRow({ review, first }: { review: Review; first?: boolean }
   const comments = review.comments ?? 0;
 
   return (
-    <Row first={first} onLongPress={isMine ? undefined : report} chevron={false} testID={`review-${review.id}`}>
+    <Row first={first} chevron={false} testID={`review-${review.id}`}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable
