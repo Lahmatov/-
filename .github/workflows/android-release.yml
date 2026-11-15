@@ -1,0 +1,86 @@
+name: Android release
+
+# Подписанный AAB для Google Play из mobile/ (Expo). Запуск вручную или тегом v*.
+# Готовый файл — в артефактах запуска; загрузка в Google Play Console пока вручную
+# (автозагрузка — после того, как владелец заведёт аккаунт разработчика Google Play).
+# Секреты — mobile/README.md, раздел «Выпуск».
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    name: Сборка AAB
+    runs-on: ubuntu-latest
+    env:
+      APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
+      BUILD_NUMBER: ${{ github.run_number }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Проверка секретов
+        working-directory: .
+        run: |
+          missing=""
+          for name in APP_BUNDLE_ID API_BASE_URL ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            [ -z "${!name}" ] && missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Не заданы секреты:$missing — Settings → Secrets and variables → Actions (см. mobile/README.md)"
+            exit 1
+          fi
+          case "$API_BASE_URL" in
+            https://*) ;;
+            *) echo "::error::API_BASE_URL должен начинаться с https://"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+
+      - name: Нативный проект (expo prebuild)
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: "1"
+
+      - name: Подписанный AAB
+        working-directory: mobile/android
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          ./gradlew bundleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polka-android-${{ github.run_number }}
+          path: mobile/android/app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+
+      - name: Удалить ключ
+        if: always()
+        working-directory: .
+        run: rm -f "$RUNNER_TEMP/release.keystore"
