@@ -15,6 +15,10 @@ export type Theme = {
   star: string;
   warningBackground: string;
   success: string;
+  /** Виртуальная полка: стенка шкафа, доска и её нижняя кромка. */
+  woodBack: string;
+  wood: string;
+  woodEdge: string;
 };
 
 const light: Theme = {
@@ -32,6 +36,9 @@ const light: Theme = {
   star: "#F59E0B",
   warningBackground: "#FDE7C4",
   success: "#16A34A",
+  woodBack: "#EFE3D3",
+  wood: "#B07A4A",
+  woodEdge: "#7F532D",
 };
 
 const dark: Theme = {
@@ -49,6 +56,9 @@ const dark: Theme = {
   star: "#FBBF24",
   warningBackground: "#5A3B0A",
   success: "#4ADE80",
+  woodBack: "#1E1712",
+  wood: "#6B4728",
+  woodEdge: "#3E2915",
 };
 
 export function useTheme(): Theme {

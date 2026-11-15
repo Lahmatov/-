@@ -57,32 +57,41 @@ export default function ShelfScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: L("Мои книги"),
-      headerRight:
-        shelfGenres.length > 0
-          ? () => (
-              <Pressable
-                onPress={() =>
-                  show({
-                    title: L("Жанр"),
-                    options: [
-                      { title: (genre == null ? "✓ " : "") + L("Все жанры"), onPress: () => setGenre(null) },
-                      ...shelfGenres.map((g) => ({ title: (genre === g.slug ? "✓ " : "") + g.name, onPress: () => setGenre(g.slug) })),
-                    ],
-                  })
-                }
-                hitSlop={8}
-                style={{ marginHorizontal: 16 }}
-                accessibilityRole="button"
-                accessibilityLabel={L("Фильтр по жанру")}
-                accessibilityValue={{ text: shelfGenres.find((g) => g.slug === genre)?.name ?? L("Все жанры") }}
-                testID="shelf-genre-filter"
-              >
-                <Ionicons name={genre == null ? "filter-circle-outline" : "filter-circle"} size={24} color={theme.accent} />
-              </Pressable>
-            )
-          : undefined,
+      headerRight: () => (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 18, marginHorizontal: 16 }}>
+          <Pressable
+            onPress={() => router.push(routes.bookcase())}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={L("Моя книжная полка")}
+            testID="shelf-bookcase"
+          >
+            <Ionicons name="library-outline" size={24} color={theme.accent} />
+          </Pressable>
+          {shelfGenres.length > 0 && (
+            <Pressable
+              onPress={() =>
+                show({
+                  title: L("Жанр"),
+                  options: [
+                    { title: (genre == null ? "✓ " : "") + L("Все жанры"), onPress: () => setGenre(null) },
+                    ...shelfGenres.map((g) => ({ title: (genre === g.slug ? "✓ " : "") + g.name, onPress: () => setGenre(g.slug) })),
+                  ],
+                })
+              }
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={L("Фильтр по жанру")}
+              accessibilityValue={{ text: shelfGenres.find((g) => g.slug === genre)?.name ?? L("Все жанры") }}
+              testID="shelf-genre-filter"
+            >
+              <Ionicons name={genre == null ? "filter-circle-outline" : "filter-circle"} size={24} color={theme.accent} />
+            </Pressable>
+          )}
+        </View>
+      ),
     });
-  }, [navigation, shelfGenres, genre, show, theme.accent]);
+  }, [navigation, shelfGenres, genre, show, theme.accent, router]);
 
   // Жанр пропал с полки (книгу убрали) — сбрасываем фильтр, иначе список будет пустым без видимой причины.
   useEffect(() => {

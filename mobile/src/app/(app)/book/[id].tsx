@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { seg } from "../../../api/client";
 import { formatDay } from "../../../api/dates";
 import {
@@ -68,14 +68,27 @@ export default function BookScreen() {
 
   async function setStatus(status: ReadingStatus) {
     setUpdating(true);
+    const wasRead = detailsRef.current?.myEntry?.status === "READ";
+    let done = false;
     await attempt(
       async () => {
         await api.setStatus(status, bookId);
+        done = true;
         await state.reload();
       },
-      () => applyOffline(status),
+      () => {
+        done = true;
+        applyOffline(status);
+      },
     );
     setUpdating(false);
+    // Дочитанная книга встаёт на виртуальную полку — предлагаем на неё посмотреть.
+    if (done && status === "READ" && !wasRead) {
+      Alert.alert(L("Книга на полке"), L("«%@» теперь стоит на вашей книжной полке.", detailsRef.current?.book.title ?? ""), [
+        { text: L("Посмотреть полку"), onPress: () => router.push(routes.bookcase()) },
+        { text: "OK", style: "cancel" },
+      ]);
+    }
   }
 
   async function removeFromShelf() {

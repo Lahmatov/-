@@ -23,6 +23,7 @@ export const routes = {
   list: (id: string) => `/list/${enc(id)}` as Href,
   listEdit: (id?: string) => (id ? `/list-edit?id=${enc(id)}` : "/list-edit") as Href,
   addToList: (bookId: string) => `/add-to-list/${enc(bookId)}` as Href,
+  bookcase: () => "/bookcase" as Href,
   quotes: () => "/quotes" as Href,
   quoteEdit: (params: { bookId: string; quoteId?: string }) =>
     (`/quote-edit?bookId=${enc(params.bookId)}` + (params.quoteId ? `&quoteId=${enc(params.quoteId)}` : "")) as Href,

@@ -130,7 +130,8 @@ export default function ProfileScreen() {
       <BadgesSection badges={badges.data ?? []} />
 
       <Section>
-        <LabelRow first icon="list-outline" title={L("Мои списки")} onPress={() => router.push(routes.lists())} testID="listsLink" />
+        <LabelRow first icon="library-outline" title={L("Моя книжная полка")} onPress={() => router.push(routes.bookcase())} testID="bookcaseLink" />
+        <LabelRow icon="list-outline" title={L("Мои списки")} onPress={() => router.push(routes.lists())} testID="listsLink" />
         <LabelRow icon="people-outline" title={L("Книжные клубы")} onPress={() => router.push(routes.clubs())} testID="clubsLink" />
         <LabelRow icon="chatbox-ellipses-outline" title={L("Мои цитаты")} onPress={() => router.push(routes.quotes())} testID="quotesLink" />
         <LabelRow icon="flag-outline" title={L("Челленджи")} onPress={() => router.push(routes.challenges())} testID="profileChallengesLink" />
