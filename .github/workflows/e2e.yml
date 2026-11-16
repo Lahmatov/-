@@ -1,0 +1,240 @@
+# e2e tests of the mobile app (e2e framework, mobile/e2e.config.ts and mobile/e2e.native.config.ts).
+# Separate from CI: web engine on Linux; iOS simulator on macOS; Android emulator on Linux with KVM
+# (Apple-silicon macOS runners cannot run the Android emulator: no nested virtualization).
+# agent.act steps replay from the committed mobile/.e2e/cache without a model. The agent.assert test needs a
+# Claude login and is skipped unless the repository secret CLAUDE_CODE_OAUTH_TOKEN (`claude setup-token`) is set.
+name: e2e
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: postgresql://bookshelf:bookshelf@localhost:5432/bookshelf
+  AUTH_SECRET: ci-secret-not-for-production
+  AUTH_TRUST_HOST: "true"
+  E2E_TELEMETRY_DISABLED: "1"
+
+jobs:
+  web:
+    name: e2e — web (react-native-web, Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bookshelf
+          POSTGRES_PASSWORD: bookshelf
+          POSTGRES_DB: bookshelf
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bookshelf" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+      - name: API server (build, schema, seed catalog)
+        run: |
+          npm ci
+          npx prisma db push
+          npm run db:seed
+          npm run build
+      - run: npm ci
+        working-directory: mobile
+      - name: Chromium for the web engine
+        working-directory: mobile
+        run: npx @e2e-dev/web install chromium --with-deps
+      - name: e2e (web)
+        working-directory: mobile
+        run: npx e2e run --reporter list,junit
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-web
+          path: |
+            mobile/.e2e/report.json
+            mobile/.e2e/junit.xml
+            mobile/.e2e/results
+            mobile/.e2e/logs
+          if-no-files-found: warn
+          retention-days: 7
+
+  ios:
+    name: e2e — iOS simulator
+    runs-on: macos-26
+    timeout-minutes: 75
+    steps:
+      - name: Newest stable Xcode on the runner
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+      - name: PostgreSQL (macOS runners have no service containers)
+        run: |
+          brew install postgresql@17
+          PG="$(brew --prefix postgresql@17)/bin"
+          brew services start postgresql@17
+          for i in $(seq 1 30); do "$PG/pg_isready" -h localhost && break; sleep 1; done
+          "$PG/psql" -h localhost -d postgres -c "CREATE ROLE bookshelf LOGIN SUPERUSER PASSWORD 'bookshelf'"
+          "$PG/createdb" -h localhost -O bookshelf bookshelf
+      - name: API server (build, schema, seed catalog)
+        run: |
+          npm ci
+          npx prisma db push
+          npm run db:seed
+          npm run build
+      - run: npm ci
+        working-directory: mobile
+      - name: Native project (expo prebuild + pod install)
+        working-directory: mobile
+        run: npx expo prebuild --platform ios
+        env:
+          CI: "1"
+      # Debug build: it loads JavaScript from Metro and calls the API on localhost:3000, both started by
+      # e2e/serve-native.mjs. (A Release build only accepts an https:// API address.)
+      - name: Debug build for the simulator
+        working-directory: mobile/ios
+        run: |
+          xcodebuild build \
+            -workspace Polka.xcworkspace \
+            -scheme Polka \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO
+      - uses: actions/cache@v4
+        with:
+          path: ~/.agent-device/apple-runner/derived
+          key: agent-device-runner-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json') }}
+      - name: Boot a simulator and install the app
+        working-directory: mobile
+        run: |
+          RUNTIME=$(xcrun simctl list runtimes -j | node -e 'const r=JSON.parse(require("fs").readFileSync(0)).runtimes.filter(x=>x.isAvailable&&x.platform==="iOS");console.log(r.at(-1).identifier)')
+          echo "iOS runtime: $RUNTIME"
+          UDID=$(xcrun simctl create e2e "iPhone 17" "$RUNTIME")
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" ios/build/Build/Products/Debug-iphonesimulator/Polka.app
+      - name: e2e (iOS)
+        working-directory: mobile
+        run: npx e2e run --config e2e.native.config.ts --target ios --reporter list,junit
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ios
+          path: |
+            mobile/.e2e/report.json
+            mobile/.e2e/junit.xml
+            mobile/.e2e/results
+            mobile/.e2e/logs
+          if-no-files-found: warn
+          retention-days: 7
+
+  android:
+    name: e2e — Android emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bookshelf
+          POSTGRES_PASSWORD: bookshelf
+          POSTGRES_DB: bookshelf
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bookshelf" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: API server (build, schema, seed catalog)
+        run: |
+          npm ci
+          npx prisma db push
+          npm run db:seed
+          npm run build
+      - run: npm ci
+        working-directory: mobile
+      - name: Native project (expo prebuild)
+        working-directory: mobile
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: "1"
+      - name: Debug APK (loads JavaScript from Metro)
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon -PreactNativeArchitectures=x86_64
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      # Each script line runs in its own shell; the emulator stops when the step ends.
+      - name: e2e (Android)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          working-directory: mobile
+          script: |
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb reverse tcp:3000 tcp:3000
+            adb reverse tcp:8081 tcp:8081
+            npx e2e run --config e2e.native.config.ts --target android --reporter list,junit
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-android
+          path: |
+            mobile/.e2e/report.json
+            mobile/.e2e/junit.xml
+            mobile/.e2e/results
+            mobile/.e2e/logs
+          if-no-files-found: warn
+          retention-days: 7

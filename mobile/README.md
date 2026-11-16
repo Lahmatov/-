@@ -91,6 +91,47 @@ GOOGLE_WEB_CLIENT_ID=1234-web.apps.googleusercontent.com
 Перед публикацией: вход через Apple обязателен при входе через Google (App Store 4.8) — есть; удаление аккаунта
 (5.1.1(v)) — в «Профиле»; нужна ссылка на политику конфиденциальности.
 
+## E2E-тесты
+
+Сквозные тесты на фреймворке [e2e](https://github.com/e2e-inc/e2e): тест открывает приложение, нажимает кнопки и
+проверяет экран. Тесты — `e2e/tests/`, настройки — `e2e.config.ts` (веб) и `e2e.native.config.ts` (iOS / Android).
+
+**Веб (запускается где угодно).** Тот же код приложения в Chromium через react-native-web (экран 390×844, русский
+язык). Нужны база, каталог и сборка сервера:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d        # в корне репозитория
+npx prisma db push && npm run db:seed && npm run build # в корне
+cd mobile && npm ci
+npx @e2e-dev/web install chromium                     # один раз
+npm run test:e2e                                      # все веб-тесты; один файл: npx e2e run e2e/tests/web/search.e2e.ts
+```
+
+Запуск сам поднимает сервер API на `:3100` (если он не запущен), собирает веб-версию (`dist-web/`) и отдаёт её на
+`http://127.0.0.1:8091` вместе с `/api` — см. `e2e/serve-web.mjs`. Тестовый аккаунт `e2e-reader@example.test`
+создаётся при первом запуске (`e2e/reader.ts`; в CI и на общей базе — переменные `E2E_USER_READER_USERNAME`,
+`E2E_USER_READER_PASSWORD`). Для веба токен хранится в `localStorage` (`src/auth/storage.web.ts`; на телефоне —
+по-прежнему Keychain / Keystore).
+
+**Шаги с ИИ-агентом.** Часть тестов описывает действие словами (`agent.act`, `agent.assert`); их выполняет Claude Code
+со своим входом (`claude` залогинен, или `CLAUDE_CODE_OAUTH_TOKEN` / `ANTHROPIC_API_KEY`). Записанные действия лежат в
+`.e2e/cache/` (хранится в git), и повторные запуски, в том числе в CI, проигрывают их без агента. Новый или
+изменённый шаг записывается при первом запуске с агентом — файл из `.e2e/cache/` коммитится вместе с тестом.
+`agent.assert` обращается к агенту каждый раз, поэтому в CI без секрета `CLAUDE_CODE_OAUTH_TOKEN` этот тест
+пропускается.
+
+**iOS и Android.** `npm run test:e2e:native -- --target ios` (или `android`) на Mac с запущенным симулятором (Android —
+эмулятор и `adb reverse tcp:3000 tcp:3000`, `adb reverse tcp:8081 tcp:8081`), где установлена Debug-сборка; сервер
+API на `:3000` и Metro поднимает `e2e/serve-native.mjs`. Полный рецепт — workflow `.github/workflows/e2e.yml`
+(задачи `e2e — iOS simulator`, `e2e — Android emulator`).
+
+**Результаты:** `.e2e/report.json`, при ошибке — `.e2e/results/<тест>/trace.md` (экран в момент ошибки, шаги, логи),
+лог сервера — `.e2e/logs/app.log`. Всё, кроме `.e2e/cache/`, в git не попадает.
+
+**Скилл проверки для агентов:** `.agents/skills/verify-polka/` (в Claude Code — `/verify-polka`): как запустить
+приложение, проверить, что оно живо, доказать изменение и где лежат доказательства; `features/` — карта функций с
+тестами и заданиями для баг-баша.
+
 ## Ещё не перенесено из SwiftUI-версии
 
 - Виджет на главном экране (iOS WidgetKit / Android App Widget) — отдельная задача.

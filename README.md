@@ -149,7 +149,9 @@ PER_SUBJECT=2000 npm run import:openlibrary -- fantasy science_fiction
 ## Проверки
 
 GitHub Actions на каждый PR: сервер (типы, тесты, сборка на Postgres + Redis) и мобильное приложение (типы, тесты,
-JS-бандлы, нативные сборки Android и iOS).
+JS-бандлы, нативные сборки Android и iOS). Отдельный workflow `e2e` прогоняет сквозные тесты приложения: в браузере
+(веб-версия), на симуляторе iOS и эмуляторе Android — см. `mobile/README.md`, «E2E-тесты»; скилл проверки для
+агентов — `.agents/skills/verify-polka/`.
 
 ## Стек
 
