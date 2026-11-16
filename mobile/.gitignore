@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# e2e: run output stays local; the replay cache (.e2e/cache) is committed so agent steps replay without a model
+/.e2e/*
+!/.e2e/cache/
+/dist-web/

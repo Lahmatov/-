@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-11-16T15:19:34.973Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "type",
+        "summary": "type \"Братья Карамазовы\" into textbox \"Поиск\"",
+        "target": {
+          "role": "textbox",
+          "name": "Поиск",
+          "testId": "search-field",
+          "placeholder": "Название или автор"
+        },
+        "value": "Братья Карамазовы"
+      }
+    ],
+    "executor": {
+      "name": "claude-code",
+      "version": "1"
+    },
+    "recordedFor": {
+      "testId": "e2e/tests/web/search.e2e.ts::search::finds%20a%20seed%20book%20by%20its%20title",
+      "targetId": "web",
+      "instructionDigest": "e22d8745f2a4284832dbaaf9de50f91348c2f0cf82a27fb4becf8b25cfa6a480",
+      "paramsDigest": "2fb87aaa045e574646c9b6adb05d39d4051da1a8e46d7cc25a73325a4697ca4f",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Ввёл «Братья Карамазовы» в поле поиска. В результатах появился раздел «В КАТАЛОГЕ» с книгой «Братья Карамазовы», Фёдор Достоевский · 1880. Кнопка «Добавить книгу вручную» тоже на экране.",
+    "startPath": "/search",
+    "endPath": "/search",
+    "endAnchors": [
+      {
+        "role": "textbox",
+        "name": "Поиск",
+        "testId": "search-field",
+        "placeholder": "Название или автор",
+        "value": "Братья Карамазовы"
+      },
+      {
+        "text": ""
+      },
+      {
+        "text": "В КАТАЛОГЕ"
+      },
+      {
+        "text": "Братья Карамазовы"
+      },
+      {
+        "text": "Фёдор Достоевский · 1880"
+      },
+      {
+        "text": ""
+      },
+      {
+        "text": "Добавить книгу вручную"
+      },
+      {
+        "text": "Если книги нет ни у нас, ни в Open Library"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "textbox",
+        "name": "Поиск",
+        "testId": "search-field",
+        "placeholder": "Название или автор"
+      },
+      {
+        "text": "ЧТО ПОЧИТАТЬ ДАЛЬШЕ"
+      },
+      {
+        "text": "Мастер и Маргарита"
+      },
+      {
+        "text": "Михаил Булгаков · 1967"
+      },
+      {
+        "text": "Лучшее в любимом жанре"
+      },
+      {
+        "text": "Война и мир"
+      },
+      {
+        "text": "Лев Толстой · 1869"
+      },
+      {
+        "text": "Собачье сердце"
+      }
+    ],
+    "endWaitMs": 16713,
+    "keyedBy": {
+      "cacheSchema": "trace-1",
+      "policyVersion": "conservative/6",
+      "project": "1927b601e62d9bc772a975d0a79d1bdaf1cc826cdbd01abd8c19744037265bee",
+      "platform": "web",
+      "engineName": "web",
+      "engineSpiVersion": 1,
+      "appIdentity": "91329f1483e13b72360bc943234bc3afe9ceb69f1dced713fd23d01cfd70a358",
+      "agentContextDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

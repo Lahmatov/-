@@ -31,11 +31,19 @@
     "react-native-screens": "~4.30.1"
   },
   "devDependencies": {
+    "@agentclientprotocol/claude-agent-acp": "0.107.3",
+    "@e2e-dev/acp": "0.1.2",
+    "@e2e-dev/mobile": "0.12.7",
+    "@e2e-dev/web": "0.16.0",
+    "@expo/metro-runtime": "~58.0.17",
     "@react-native/jest-preset": "^0.88.1",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.3.0",
+    "e2e": "0.23.1",
     "jest": "~29.7.0",
     "jest-expo": "~58.0.14",
+    "react-dom": "19.3.0",
+    "react-native-web": "~0.21.4",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -44,7 +52,9 @@
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "export": "expo export --platform ios --platform android --output-dir dist"
+    "export": "expo export --platform ios --platform android --output-dir dist",
+    "test:e2e": "e2e run",
+    "test:e2e:native": "e2e run --config e2e.native.config.ts"
   },
   "private": true,
   "jest": {

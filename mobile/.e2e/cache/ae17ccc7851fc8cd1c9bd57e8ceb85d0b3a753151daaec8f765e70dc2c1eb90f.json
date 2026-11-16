@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-11-16T15:20:01.783Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Война и мир Война и мир Лев Толстой · 1…\"",
+        "target": {
+          "role": "button",
+          "name": "Война и мир Война и мир Лев Толстой · 1869"
+        }
+      }
+    ],
+    "executor": {
+      "name": "claude-code",
+      "version": "1"
+    },
+    "recordedFor": {
+      "testId": "e2e/tests/web/search.e2e.ts::search::opens%20a%20book%20card%20from%20the%20search%20results",
+      "targetId": "web",
+      "instructionDigest": "c8c640392182c34be7f8f4269e29ca65c4662d06510c00fc2ee399cbac30e822",
+      "paramsDigest": "1286357b7052c9f508f0cd7e796c5d897bb2c5d247c55f148e9c11dfc32b13c1",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Я нажал на результат «Война и мир» в поиске. Открылась страница книги (/book/cmwhreskm00007d32muejhqe0) с заголовком «Война и мир», автором Лев Толстой и годом 1869.",
+    "startPath": "/search",
+    "endPath": "/book/cmwhreskm00007d32muejhqe0",
+    "endAnchors": [
+      {
+        "text": ""
+      },
+      {
+        "text": ""
+      },
+      {
+        "role": "heading",
+        "name": "Война и мир"
+      },
+      {
+        "text": "Лев Толстой"
+      },
+      {
+        "text": "★ 9.0"
+      },
+      {
+        "text": "1 оценка"
+      },
+      {
+        "text": "прочитали"
+      },
+      {
+        "text": "ЖАНРЫ"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "heading",
+        "name": "Поиск"
+      },
+      {
+        "text": ""
+      },
+      {
+        "text": ""
+      },
+      {
+        "role": "textbox",
+        "name": "Поиск",
+        "testId": "search-field",
+        "placeholder": "Название или автор",
+        "value": "Война и мир"
+      },
+      {
+        "text": ""
+      },
+      {
+        "text": "В КАТАЛОГЕ"
+      },
+      {
+        "text": "Лев Толстой · 1869"
+      },
+      {
+        "text": ""
+      }
+    ],
+    "endWaitMs": 15286,
+    "keyedBy": {
+      "cacheSchema": "trace-1",
+      "policyVersion": "conservative/6",
+      "project": "1927b601e62d9bc772a975d0a79d1bdaf1cc826cdbd01abd8c19744037265bee",
+      "platform": "web",
+      "engineName": "web",
+      "engineSpiVersion": 1,
+      "appIdentity": "91329f1483e13b72360bc943234bc3afe9ceb69f1dced713fd23d01cfd70a358",
+      "agentContextDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}
